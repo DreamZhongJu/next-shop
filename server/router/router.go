@@ -21,6 +21,10 @@ func Router() *gin.Engine {
 	{
 		user.POST("/login", controllers.UserControllers{}.Login)
 		user.POST("/sign", controllers.UserControllers{}.Sign)
+
+		user.POST("/search", controllers.UserSearch{}.Search)
+		user.GET("/search/all", controllers.UserSearch{}.SearchAll)
+		user.GET("/search/detail/:id", controllers.UserSearch{}.GetProductDetail)
 	}
 
 	return r

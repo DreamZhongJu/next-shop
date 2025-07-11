@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import AuthModal from './AuthModal'
+import Button from '@/components/common/Button'
 
 export default function Login() {
     const [modalType, setModalType] = useState<'login' | 'signup' | null>(null)
@@ -23,27 +24,27 @@ export default function Login() {
             {user ? (
                 <div className="flex items-center space-x-4">
                     <span className="text-sm text-gray-600">你好，{user.Username}</span>
-                    <button
+                    <Button
                         onClick={handleLogout}
                         className="text-sm text-red-600 hover:text-red-800 cursor-pointer"
                     >
                         登出
-                    </button>
+                    </Button>
                 </div>
             ) : (
                 <div className="space-x-4 md:flex">
-                    <button
+                    <Button
                         onClick={() => setModalType('login')}
                         className="cursor-pointer text-sm text-gray-600 hover:text-blue-600 hover:font-semibold"
                     >
                         登录
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         onClick={() => setModalType('signup')}
                         className="cursor-pointer text-sm text-gray-600 hover:text-blue-600 hover:font-semibold"
                     >
                         注册
-                    </button>
+                    </Button>
                 </div>
             )}
             {modalType && (
