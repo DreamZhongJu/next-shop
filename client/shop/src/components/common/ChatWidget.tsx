@@ -24,13 +24,13 @@ export default function ChatWidget() {
 
     const widgetRef = useRef<HTMLDivElement>(null)
     const isResizing = useRef(false)
-    const resizeDirection = useRef<string | null>(null)
+    // const resizeDirection = useRef<string | null>(null)
     const lastMouse = useRef({ x: 0, y: 0 })
 
-    const MIN_WIDTH = 280
-    const MIN_HEIGHT = 300
-    const MAX_WIDTH = 600  // 你可以根据页面布局调整
-    const MAX_HEIGHT = 700
+    // const MIN_WIDTH = 280
+    // const MIN_HEIGHT = 300
+    // const MAX_WIDTH = 600  // 你可以根据页面布局调整
+    // const MAX_HEIGHT = 700
 
     const isDragging = useRef(false)
 
@@ -60,57 +60,57 @@ export default function ChatWidget() {
     }
 
 
-    const startResizing = (e: React.MouseEvent, direction: string) => {
-        e.preventDefault()
-        isResizing.current = true
-        resizeDirection.current = direction
-        lastMouse.current = { x: e.clientX, y: e.clientY }
-        document.addEventListener('mousemove', handleResize)
-        document.addEventListener('mouseup', stopResizing)
-    }
+    // const startResizing = (e: React.MouseEvent, direction: string) => {
+    //     e.preventDefault()
+    //     isResizing.current = true
+    //     resizeDirection.current = direction
+    //     lastMouse.current = { x: e.clientX, y: e.clientY }
+    //     document.addEventListener('mousemove', handleResize)
+    //     document.addEventListener('mouseup', stopResizing)
+    // }
 
-    const handleResize = (e: MouseEvent) => {
-        if (!isResizing.current || !resizeDirection.current) return  // ✅ 先判断是否为 null
+    // const handleResize = (e: MouseEvent) => {
+    //     if (!isResizing.current || !resizeDirection.current) return  // ✅ 先判断是否为 null
 
-        const direction = resizeDirection.current // ⬅️ 提前缓存，防止中间变成 null
-        const dx = e.clientX - lastMouse.current.x
-        const dy = e.clientY - lastMouse.current.y
-        lastMouse.current = { x: e.clientX, y: e.clientY }
+    //     const direction = resizeDirection.current // ⬅️ 提前缓存，防止中间变成 null
+    //     const dx = e.clientX - lastMouse.current.x
+    //     const dy = e.clientY - lastMouse.current.y
+    //     lastMouse.current = { x: e.clientX, y: e.clientY }
 
-        setSize(prevSize => {
-            let newWidth = prevSize.width
-            let newHeight = prevSize.height
-            let newX = position.x
-            let newY = position.y
+    //     setSize(prevSize => {
+    //         let newWidth = prevSize.width
+    //         let newHeight = prevSize.height
+    //         let newX = position.x
+    //         let newY = position.y
 
-            if (direction.includes('right')) newWidth += dx
-            if (direction.includes('left')) {
-                newWidth -= dx
-                newX += dx
-            }
-            if (direction.includes('bottom')) newHeight += dy
-            if (direction.includes('top')) {
-                newHeight -= dy
-                newY += dy
-            }
+    //         if (direction.includes('right')) newWidth += dx
+    //         if (direction.includes('left')) {
+    //             newWidth -= dx
+    //             newX += dx
+    //         }
+    //         if (direction.includes('bottom')) newHeight += dy
+    //         if (direction.includes('top')) {
+    //             newHeight -= dy
+    //             newY += dy
+    //         }
 
-            newWidth = Math.min(Math.max(MIN_WIDTH, newWidth), MAX_WIDTH)
-            newHeight = Math.min(Math.max(MIN_HEIGHT, newHeight), MAX_HEIGHT)
+    //         newWidth = Math.min(Math.max(MIN_WIDTH, newWidth), MAX_WIDTH)
+    //         newHeight = Math.min(Math.max(MIN_HEIGHT, newHeight), MAX_HEIGHT)
 
-            // ✅ 同步更新位置
-            setPosition({ x: newX, y: newY })
+    //         // ✅ 同步更新位置
+    //         setPosition({ x: newX, y: newY })
 
-            return { width: newWidth, height: newHeight }
-        })
-    }
+    //         return { width: newWidth, height: newHeight }
+    //     })
+    // }
 
 
-    const stopResizing = () => {
-        isResizing.current = false
-        resizeDirection.current = null
-        document.removeEventListener('mousemove', handleResize)
-        document.removeEventListener('mouseup', stopResizing)
-    }
+    // const stopResizing = () => {
+    //     isResizing.current = false
+    //     resizeDirection.current = null
+    //     document.removeEventListener('mousemove', handleResize)
+    //     document.removeEventListener('mouseup', stopResizing)
+    // }
 
     const sendMessage = async () => {
         if (!input.trim()) return
@@ -220,7 +220,6 @@ export default function ChatWidget() {
                         'top-left', 'top-right', 'bottom-left', 'bottom-right'].map(direction => (
                             <div
                                 key={direction}
-                                onMouseDown={e => startResizing(e, direction)}
                                 className={`absolute ${getResizeHandleClass(direction)}`}
                             />
                         ))}
