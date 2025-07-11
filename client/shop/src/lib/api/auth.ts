@@ -1,6 +1,6 @@
-import { postForm } from './request'
+import { postForm, baseURL } from './request'
 
-const baseURL = 'http://localhost:8080'
+
 
 export const login = (username: string, password: string) =>
     postForm(`${baseURL}/api/v1/login`, { username, password })
