@@ -25,6 +25,23 @@ func Router() *gin.Engine {
 		user.POST("/search", controllers.UserSearch{}.Search)
 		user.GET("/search/all", controllers.UserSearch{}.SearchAll)
 		user.GET("/search/detail/:id", controllers.UserSearch{}.GetProductDetail)
+
+		// 嵌套购物车
+		cart := user.Group("/cart")
+		{
+			cart.POST("/add", controllers.CartController{}.Add)
+			cart.PUT("/update", controllers.CartController{}.Update)
+			cart.POST("/delete", controllers.CartController{}.Delete)
+			cart.GET("/list/:user_id", controllers.CartController{}.List)
+		}
+
+		// // 嵌套收藏
+		// favorite := user.Group("/favorite")
+		// {
+		// 	favorite.POST("/add", controllers.FavoriteController{}.Add)
+		// 	favorite.DELETE("/remove", controllers.FavoriteController{}.Remove)
+		// 	favorite.GET("/list/:user_id", controllers.FavoriteController{}.List)
+		// }
 	}
 
 	return r

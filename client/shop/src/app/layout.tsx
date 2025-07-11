@@ -2,6 +2,8 @@ import type { Metadata } from "next"
 import "../styles/globals.css"
 import '../styles/markdown.css'
 import ChatWidget from "@/components/common/ChatWidget"
+import Navigation from "@/components/home/Navigation"
+import SidebarLayout from "@/components/sideBar"
 
 export const metadata: Metadata = {
   title: "NextShop 电商平台",
@@ -25,8 +27,13 @@ export default function RootLayout({
         {/* <link rel="icon" href="/favicon.ico" /> */}
       </head>
       <body className="antialiased font-sans bg-white text-black">
-        {children}
+        <Navigation />
         <ChatWidget /> {/* ✅ 这里全局加载 AI 对话 */}
+        {/* 页面主体 */}
+        <main className="flex-1">
+          {children}
+        </main>
+        <SidebarLayout />
       </body>
     </html>
   )

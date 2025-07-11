@@ -1,6 +1,4 @@
-import { postForm, get } from './request'
-
-const baseURL = 'http://localhost:8080'
+import { postForm, get, baseURL } from './request'
 
 interface SearchOptions {
     signal?: AbortSignal

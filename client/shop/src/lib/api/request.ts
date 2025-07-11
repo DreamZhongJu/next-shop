@@ -5,6 +5,8 @@ interface RequestOptions {
     [key: string]: any;
 }
 
+export const baseURL = 'http://localhost:8080'
+
 export async function postForm<T = any>(
     url: string,
     data: Record<string, string>,
@@ -22,20 +24,47 @@ export async function postForm<T = any>(
     if (!res.ok) {
         let errorMsg = `HTTP error! status: ${res.status}`
         try {
-            // 尝试解析错误响应中的JSON
             const errorBody = await res.json()
             if (errorBody.msg) {
                 errorMsg = errorBody.msg
             } else if (errorBody.message) {
                 errorMsg = errorBody.message
             }
-        } catch (e) {
-            // 如果无法解析JSON，使用默认错误信息
-        }
+        } catch (e) { }
         throw new Error(errorMsg)
     }
 
     return res.json()
+}
+
+export async function putForm<T = any>(
+    url: string,
+    data: Record<string, string>,
+    options?: RequestOptions
+): Promise<T> {
+    const fetchOptions: RequestInit = {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(data).toString(),
+        ...options
+    };
+
+    const res = await fetch(url, fetchOptions);
+
+    if (!res.ok) {
+        let errorMsg = `HTTP error! status: ${res.status}`;
+        try {
+            const errorBody = await res.json();
+            if (errorBody.msg) {
+                errorMsg = errorBody.msg;
+            } else if (errorBody.message) {
+                errorMsg = errorBody.message;
+            }
+        } catch (e) { }
+        throw new Error(errorMsg);
+    }
+
+    return res.json();
 }
 
 export async function get<T = any>(
@@ -52,16 +81,13 @@ export async function get<T = any>(
     if (!res.ok) {
         let errorMsg = `HTTP error! status: ${res.status}`;
         try {
-            // 尝试解析错误响应中的JSON
             const errorBody = await res.json();
             if (errorBody.msg) {
                 errorMsg = errorBody.msg;
             } else if (errorBody.message) {
                 errorMsg = errorBody.message;
             }
-        } catch (e) {
-            // 如果无法解析JSON，使用默认错误信息
-        }
+        } catch (e) { }
         throw new Error(errorMsg);
     }
 

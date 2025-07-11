@@ -135,7 +135,7 @@ export default function ChatWidget() {
                     const { done, value } = await reader.read()
                     if (done) break
                     botReply += decoder.decode(value, { stream: true })
-                    const html = marked.parse(botReply)
+                    const html = marked.parse(botReply) as string
 
                     setMessages(prev => {
                         const updated = [...prev]
