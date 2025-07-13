@@ -21,7 +21,13 @@ export default function AuthModal({ type, onClose }: { type: 'login' | 'signup',
             if (res.Code === 0 && res.data) {
                 localStorage.setItem('user', JSON.stringify({
                     Username: res.data.user.Username,
-                    ID: res.data.user.ID,
+                    ID: res.data.user.UserID,
+                    Role: res.data.user.Role,
+                    token: res.data.token,
+                }))
+                console.log(JSON.stringify({
+                    Username: res.data.user.Username,
+                    ID: res.data.user.UserID,
                     Role: res.data.user.Role,
                     token: res.data.token,
                 }))

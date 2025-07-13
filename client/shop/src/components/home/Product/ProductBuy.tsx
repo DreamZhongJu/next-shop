@@ -12,6 +12,7 @@ export default function ProductBuy({ product }: { product: any }) {
 
     const getUid = () => {
         const userStr = localStorage.getItem('user')
+        console.log(userStr)
         if (!userStr) return null
         const user = JSON.parse(userStr)
         return user.ID || user.UserID || user.id
