@@ -11,9 +11,9 @@ func Router() *gin.Engine {
 	r := gin.Default()
 
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://192.168.1.15:3000", "http://localhost:3000"}, // 允许本地开发环境
+		AllowOrigins:     []string{"http://192.168.1.15:3000", "http://localhost:3000"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 	}))
@@ -40,9 +40,6 @@ func Router() *gin.Engine {
 		}
 
 		user.GET("/user/count", controllers.UserControllers{}.Count)
-
-		// Dashboard endpoint
-		user.GET("/admin/dashboard", controllers.DashboardController{}.GetDashboardData)
 
 		// TODO: 实现后台商品管理系统
 		// - 前端新增商品管理页面，支持增删改查操作
@@ -73,11 +70,13 @@ func Router() *gin.Engine {
 
 		// 管理员用户管理
 		admin := user.Group("/admin")
-		admin.Use(middleware.AdminMiddleware()) // 需要添加管理员中间件
+		admin.Use(middleware.AuthMiddleware()) // 需要添加管理员中间件
 		{
 			admin.GET("/users", (&controllers.AdminUserController{}).GetUsers)
 			admin.PUT("/users/:id", (&controllers.AdminUserController{}).UpdateUser)
 			admin.DELETE("/users/:id", (&controllers.AdminUserController{}).DeleteUser)
+			// Dashboard endpoint
+			user.GET("/admin/dashboard", controllers.DashboardController{}.GetDashboardData)
 		}
 
 		// // 嵌套收藏

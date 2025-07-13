@@ -19,9 +19,12 @@ export default function AuthModal({ type, onClose }: { type: 'login' | 'signup',
             console.log('Response:', res)
 
             if (res.Code === 0 && res.data) {
-                const name = res.data.Username
-                localStorage.setItem('user', JSON.stringify(res.data))
-                alert(`欢迎你，${name}`)
+                localStorage.setItem('user', JSON.stringify({
+                    Username: res.data.user.Username,
+                    ID: res.data.user.ID,
+                    token: res.data.token,
+                }))
+                alert(`欢迎你，${res.data.user.Username}`)
                 onClose()
             } else {
                 alert(`失败：${res.msg || '操作失败，请重试'}`)

@@ -14,6 +14,8 @@ func main() {
 	if err := os.MkdirAll("logs", 0755); err != nil {
 		panic("无法创建logs目录: " + err.Error())
 	}
+	// fmt.Println("当前服务器时间：", time.Now())
+	// fmt.Println("当前时间戳：", time.Now().Unix())
 
 	// 配置日志
 	config := zap.NewProductionConfig()
