@@ -71,3 +71,9 @@ func Sign(username string, password string) (*User, error) {
 
 	return &user, nil
 }
+
+func AllUserCount() (int64, error) {
+	var count int64
+	err := dao.GetDB().Table("users").Count(&count).Error
+	return count, err
+}
