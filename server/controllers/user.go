@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"github.com/DreamZhongJu/next-shop/model"
+	"github.com/DreamZhongJu/next-shop/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,8 +22,16 @@ func (u UserControllers) Login(c *gin.Context) {
 		ReturnError(c, 400, err.Error())
 		return
 	}
+	token, err := utils.GenerateToken(data.UserID, data.Role)
+	if err != nil {
+		ReturnError(c, 500, "生成Token失败")
+		return
+	}
 
-	ReturnSuccess(c, 0, "登陆成功", data, 1)
+	ReturnSuccess(c, 0, "登陆成功", gin.H{
+		"user":  data,
+		"token": token,
+	}, 1)
 }
 
 func (u UserControllers) Sign(c *gin.Context) {
