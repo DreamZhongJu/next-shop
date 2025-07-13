@@ -71,6 +71,15 @@ func Router() *gin.Engine {
 		// - 使用 Nginx 配置反向代理与静态资源服务
 		// - 配置 CI/CD 流水线，例如 GitHub Actions
 
+		// 管理员用户管理
+		admin := user.Group("/admin")
+		admin.Use(middleware.AdminMiddleware()) // 需要添加管理员中间件
+		{
+			admin.GET("/users", (&controllers.AdminUserController{}).GetUsers)
+			admin.PUT("/users/:id", (&controllers.AdminUserController{}).UpdateUser)
+			admin.DELETE("/users/:id", (&controllers.AdminUserController{}).DeleteUser)
+		}
+
 		// // 嵌套收藏
 		// favorite := user.Group("/favorite")
 		// {
