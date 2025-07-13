@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/DreamZhongJu/next-shop/controllers"
+	"github.com/DreamZhongJu/next-shop/middleware" // 新增中间件导入
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
@@ -16,6 +17,9 @@ func Router() *gin.Engine {
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 	}))
+
+	// 添加日志和恢复中间件
+	r.Use(middleware.GinLogger(), middleware.GinRecovery(true))
 
 	user := r.Group("/api/v1")
 	{
@@ -34,6 +38,38 @@ func Router() *gin.Engine {
 			cart.POST("/delete", controllers.CartController{}.Delete)
 			cart.GET("/list/:user_id", controllers.CartController{}.List)
 		}
+
+		user.GET("/user/count", controllers.UserControllers{}.Count)
+
+		// Dashboard endpoint
+		user.GET("/admin/dashboard", controllers.DashboardController{}.GetDashboardData)
+
+		// TODO: 实现后台商品管理系统
+		// - 前端新增商品管理页面，支持增删改查操作
+		// - 后端添加商品增删改查 API，限制仅管理员权限访问
+
+		// TODO: 增加商品图片上传功能
+		// - 后端支持文件上传接口，可选本地存储或云存储
+		// - 前端表单支持图片上传与预览效果
+		// - 数据库记录图片 URL 字段
+
+		// TODO: 添加单元测试与接口测试
+		// - 后端：使用 Go Test 对控制器与模型方法进行测试
+		// - 前端：使用 Jest 或 Playwright 测试页面组件与用户交互流程
+
+		// TODO: 接入全局状态管理
+		// - 使用 Zustand 或 Redux Toolkit 管理登录状态与购物车状态
+		// - 提高组件间状态同步效率，避免 prop drilling
+
+		// TODO: 添加 JWT 认证与授权机制
+		// - 后端使用 JWT 实现用户登录状态管理
+		// - 配置 Token 过期时间与刷新机制
+		// - 前端在请求时自动携带 Token，并处理 401 状态码
+
+		// TODO: 项目部署与优化
+		// - 使用 Docker 制作前后端镜像
+		// - 使用 Nginx 配置反向代理与静态资源服务
+		// - 配置 CI/CD 流水线，例如 GitHub Actions
 
 		// // 嵌套收藏
 		// favorite := user.Group("/favorite")

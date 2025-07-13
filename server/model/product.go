@@ -36,6 +36,24 @@ func GetAllProducts() ([]Product, error) {
 	return products, err
 }
 
+// GetPaginatedProducts 获取分页商品数据
+func GetPaginatedProducts(page, pageSize int) ([]Product, int64, error) {
+	var products []Product
+	var total int64
+
+	// Calculate offset
+	offset := (page - 1) * pageSize
+
+	// Get total count
+	if err := dao.GetDB().Model(&Product{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated results
+	err := dao.GetDB().Offset(offset).Limit(pageSize).Find(&products).Error
+	return products, total, err
+}
+
 // GetProductByID 根据 ID 获取商品
 func GetProductByID(id int) (*Product, error) {
 	var product Product
@@ -65,4 +83,18 @@ func SearchProduct(name string) ([]Product, error) {
 		Find(&products).Error
 
 	return products, err
+}
+
+// GetProductCount returns the total number of products
+func GetProductCount() (int64, error) {
+	var count int64
+	err := dao.GetDB().Model(&Product{}).Count(&count).Error
+	return count, err
+}
+
+// GetTotalStock returns the sum of all product stock
+func GetTotalStock() (int, error) {
+	var totalStock int
+	err := dao.GetDB().Model(&Product{}).Select("COALESCE(SUM(stock), 0)").Scan(&totalStock).Error
+	return totalStock, err
 }

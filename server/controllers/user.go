@@ -34,3 +34,12 @@ func (u UserControllers) Sign(c *gin.Context) {
 	}
 	ReturnSuccess(c, 0, "注册成功", data, 1)
 }
+
+func (u UserControllers) Count(c *gin.Context) {
+	count, err := model.AllUserCount()
+	if err != nil {
+		ReturnError(c, 500, "获取用户总数失败")
+		return
+	}
+	ReturnSuccess(c, 0, "获取成功", gin.H{"count": count}, 1)
+}
