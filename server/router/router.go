@@ -68,7 +68,7 @@ func Router() *gin.Engine {
 			admin.PUT("/users/:id", (&controllers.AdminUserController{}).UpdateUser)
 			admin.DELETE("/users/:id", (&controllers.AdminUserController{}).DeleteUser)
 			// Dashboard endpoint
-			user.GET("/admin/dashboard", controllers.DashboardController{}.GetDashboardData)
+			admin.GET("/admin/dashboard", controllers.DashboardController{}.GetDashboardData)
 		}
 
 		// // 嵌套收藏
