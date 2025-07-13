@@ -32,6 +32,7 @@ func Router() *gin.Engine {
 
 		// 嵌套购物车
 		cart := user.Group("/cart")
+		cart.Use(middleware.AuthMiddleware())
 		{
 			cart.POST("/add", controllers.CartController{}.Add)
 			cart.PUT("/update", controllers.CartController{}.Update)
@@ -54,11 +55,6 @@ func Router() *gin.Engine {
 		// - 使用 Zustand 或 Redux Toolkit 管理登录状态与购物车状态
 		// - 提高组件间状态同步效率，避免 prop drilling
 
-		// TODO: 添加 JWT 认证与授权机制
-		// - 后端使用 JWT 实现用户登录状态管理
-		// - 配置 Token 过期时间与刷新机制
-		// - 前端在请求时自动携带 Token，并处理 401 状态码
-
 		// TODO: 项目部署与优化
 		// - 使用 Docker 制作前后端镜像
 		// - 使用 Nginx 配置反向代理与静态资源服务
@@ -66,7 +62,7 @@ func Router() *gin.Engine {
 
 		// 管理员用户管理
 		admin := user.Group("/admin")
-		admin.Use(middleware.AuthMiddleware()) // 需要添加管理员中间件
+		admin.Use(middleware.AdminMiddleware()) // 需要添加管理员中间件
 		{
 			admin.GET("/users", (&controllers.AdminUserController{}).GetUsers)
 			admin.PUT("/users/:id", (&controllers.AdminUserController{}).UpdateUser)
