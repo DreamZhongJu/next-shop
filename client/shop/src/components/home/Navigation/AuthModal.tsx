@@ -22,6 +22,7 @@ export default function AuthModal({ type, onClose }: { type: 'login' | 'signup',
                 localStorage.setItem('user', JSON.stringify({
                     Username: res.data.user.Username,
                     ID: res.data.user.ID,
+                    Role: res.data.user.Role,
                     token: res.data.token,
                 }))
                 alert(`欢迎你，${res.data.user.Username}`)

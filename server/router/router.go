@@ -41,10 +41,6 @@ func Router() *gin.Engine {
 
 		user.GET("/user/count", controllers.UserControllers{}.Count)
 
-		// TODO: 实现后台商品管理系统
-		// - 前端新增商品管理页面，支持增删改查操作
-		// - 后端添加商品增删改查 API，限制仅管理员权限访问
-
 		// TODO: 增加商品图片上传功能
 		// - 后端支持文件上传接口，可选本地存储或云存储
 		// - 前端表单支持图片上传与预览效果

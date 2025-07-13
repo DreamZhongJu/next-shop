@@ -1,17 +1,22 @@
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import AuthModal from './AuthModal'
 import Button from '@/components/common/Button'
 
 export default function Login() {
     const [modalType, setModalType] = useState<'login' | 'signup' | null>(null)
-    const [user, setUser] = useState<{ Username: string } | null>(null)
+    const [user, setUser] = useState<{ Username: string; Role?: string } | null>(null)
 
     useEffect(() => {
         const storedUser = localStorage.getItem('user')
         if (storedUser) {
-            setUser(JSON.parse(storedUser))
+            const userData = JSON.parse(storedUser)
+            console.log('Loaded user from localStorage:', userData)
+            setUser(userData)
         }
     }, [])
+
+    console.log('Current user state:', user)
 
     const handleLogout = () => {
         localStorage.removeItem('user') // 清除本地存储
@@ -24,6 +29,11 @@ export default function Login() {
             {user ? (
                 <div className="flex items-center space-x-4">
                     <span className="text-sm text-gray-600">你好，{user.Username}</span>
+                    {user.Role === 'admin' && (
+                        <Link href="/admin" className="text-sm text-gray-600 hover:text-blue-600">
+                            后台管理
+                        </Link>
+                    )}
                     <Button
                         onClick={handleLogout}
                         className="text-sm text-red-600 hover:text-red-800 cursor-pointer"
