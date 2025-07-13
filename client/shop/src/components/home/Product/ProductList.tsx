@@ -27,7 +27,7 @@ const ProductList: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [pagination, setPagination] = useState<Pagination>({
         currentPage: 1,
-        pageSize: 12,
+        pageSize: 10,
         totalItems: 0,
         totalPages: 1
     });
