@@ -1,6 +1,9 @@
 package utils
 
 import (
+	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -31,6 +34,14 @@ func GenerateToken(userID int, Role string) (string, error) {
 
 // 解析 Token
 func ParseToken(tokenString string) (*Claims, error) {
+	if tokenString == "" || tokenString == "undefined" || !strings.HasPrefix(tokenString, "Bearer ") {
+		return nil, errors.New("token 无效")
+	}
+
+	// 提取实际的token部分
+	tokenString = strings.TrimPrefix(tokenString, "Bearer ")
+	fmt.Println(tokenString)
+
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		return jwtSecret, nil
 	})

@@ -8,9 +8,8 @@ export default function ProductView({ product }: { product: any }) {
 
     const normalizedProduct = {
         ...product,
-        image_url: product.Image_url || ''
+        image_url: product.ImageURL || ''
     };
-
     const { currentImage, handleError } = useImageFallback(normalizedProduct.image_url);
 
     return (

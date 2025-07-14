@@ -10,6 +10,9 @@ import (
 func Router() *gin.Engine {
 	r := gin.Default()
 
+	// 静态文件路由 - 公开访问上传的图片
+	r.StaticFS("/uploads", gin.Dir("./uploads", false))
+
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://192.168.1.15:3000", "http://localhost:3000"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -69,6 +72,14 @@ func Router() *gin.Engine {
 			admin.DELETE("/users/:id", (&controllers.AdminUserController{}).DeleteUser)
 			// Dashboard endpoint
 			admin.GET("/admin/dashboard", controllers.DashboardController{}.GetDashboardData)
+
+			// 商品管理
+			admin.GET("/products", (&controllers.ProductController{}).GetProducts)
+			admin.GET("/products/:id", (&controllers.ProductController{}).GetProduct)
+			admin.POST("/products", (&controllers.ProductController{}).CreateProduct)
+			admin.PUT("/products/:id", (&controllers.ProductController{}).UpdateProduct)
+			admin.DELETE("/products/:id", (&controllers.ProductController{}).DeleteProduct)
+			admin.POST("/upload", (&controllers.ProductController{}).UploadImage)
 		}
 
 		// // 嵌套收藏

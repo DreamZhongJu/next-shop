@@ -3,9 +3,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import Button from "@/components/common/Button";
 import { searchAll } from "@/lib/api/search";
+import ProductModal from "@/components/admin/ProductModal";
 
 interface Product {
     id: number;
@@ -31,6 +31,8 @@ export default function AdminProductPage() {
         totalItems: 0,
         totalPages: 1
     });
+    const [modalOpen, setModalOpen] = useState(false);
+    const [editingProductId, setEditingProductId] = useState<number | null>(null);
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -70,9 +72,15 @@ export default function AdminProductPage() {
         <div>
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-xl font-semibold">商品管理</h1>
-                <Link href="/admin/products/new">
-                    <Button variant="primary">添加商品</Button>
-                </Link>
+                <Button
+                    variant="primary"
+                    onClick={() => {
+                        setEditingProductId(null);
+                        setModalOpen(true);
+                    }}
+                >
+                    添加商品
+                </Button>
             </div>
 
             {loading ? (
@@ -101,11 +109,16 @@ export default function AdminProductPage() {
                                     <td className="p-2 border">{item.stock}</td>
                                     <td className="p-2 border">{item.category}</td>
                                     <td className="p-2 border">
-                                        <Link href={`/admin/products/edit/${item.id}`}>
-                                            <Button variant="outline" className="mr-2 text-sm">
-                                                编辑
-                                            </Button>
-                                        </Link>
+                                        <Button
+                                            variant="outline"
+                                            className="mr-2 text-sm"
+                                            onClick={() => {
+                                                setEditingProductId(item.id);
+                                                setModalOpen(true);
+                                            }}
+                                        >
+                                            编辑
+                                        </Button>
                                         <Button variant="text" className="text-sm text-red-500">
                                             删除
                                         </Button>
@@ -142,6 +155,16 @@ export default function AdminProductPage() {
                     </div>
                 </>
             )}
+
+            <ProductModal
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                productId={editingProductId || undefined}
+                onSuccess={() => {
+                    setPagination(prev => ({ ...prev, currentPage: 1 }));
+                    setModalOpen(false);
+                }}
+            />
         </div>
     );
 }
