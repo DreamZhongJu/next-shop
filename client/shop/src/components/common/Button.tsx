@@ -4,6 +4,7 @@ import { IconType } from "react-icons"
 type ButtonProps = {
     icon?: IconType
     variant?: "default" | "outline" | "text" | "primary"
+    loading?: boolean
 } & ComponentPropsWithoutRef<"button">
 
 export default function Button({
@@ -11,6 +12,7 @@ export default function Button({
     className = "",
     icon: Icon,
     variant = "default",
+    loading = false,
     ...props
 }: ButtonProps) {
     return (
@@ -26,9 +28,16 @@ export default function Button({
                 }
             ${className}`}
             {...props}
+            disabled={loading || props.disabled}
         >
-            {Icon && <Icon className={`text-lg ${children ? "mr-1" : ""}`} />}
-            {children}
+            {loading ? (
+                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent" />
+            ) : (
+                <>
+                    {Icon && <Icon className={`text-lg ${children ? "mr-1" : ""}`} />}
+                    {children}
+                </>
+            )}
         </button>
     )
 }

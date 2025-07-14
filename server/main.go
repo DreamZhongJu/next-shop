@@ -33,5 +33,5 @@ func main() {
 	global.Log.Info("日志系统已初始化")
 
 	r := router.Router()
-	r.Run(":8080")
+	r.Run("0.0.0.0:8080")
 }

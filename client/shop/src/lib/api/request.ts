@@ -5,7 +5,7 @@ interface RequestOptions {
     [key: string]: any;
 }
 
-export const baseURL = 'http://localhost:8080'
+export const baseURL = 'http://192.168.1.15:8080'
 
 // 获取本地存储的 token
 function getAuthToken() {
@@ -55,6 +55,22 @@ export async function postForm<T = any>(
         method: 'POST',
         headers: handleAuthHeader({ 'Content-Type': 'application/x-www-form-urlencoded' }),
         body: new URLSearchParams(data).toString(),
+        ...options,
+    };
+
+    const res = await fetch(url, fetchOptions);
+    return handleResponse(res);
+}
+
+export async function post<T = any>(
+    url: string,
+    data: Record<string, any>,
+    options?: RequestOptions
+): Promise<T> {
+    const fetchOptions: RequestInit = {
+        method: 'POST',
+        headers: handleAuthHeader({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(data),
         ...options,
     };
 
