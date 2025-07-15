@@ -158,7 +158,7 @@ export default function ChatWidget() {
     return (
         <div className="fixed bottom-6 right-6 z-50">
             {!open ? (
-                <button onClick={() => setOpen(true)} className="bg-blue-600 text-white p-3 rounded-full shadow-lg">
+                <button onClick={() => setOpen(true)} className="cursor-pointer  bg-blue-600 text-white p-3 rounded-full shadow-lg">
                     AI助手
                 </button>
             ) : (
