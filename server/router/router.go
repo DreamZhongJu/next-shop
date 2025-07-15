@@ -45,23 +45,21 @@ func Router() *gin.Engine {
 
 		user.GET("/user/count", controllers.UserControllers{}.Count)
 
-		// TODO: 增加商品图片上传功能
-		// - 后端支持文件上传接口，可选本地存储或云存储
-		// - 前端表单支持图片上传与预览效果
-		// - 数据库记录图片 URL 字段
-
-		// TODO: 添加单元测试与接口测试
-		// - 后端：使用 Go Test 对控制器与模型方法进行测试
-		// - 前端：使用 Jest 或 Playwright 测试页面组件与用户交互流程
-
-		// TODO: 接入全局状态管理
-		// - 使用 Zustand 或 Redux Toolkit 管理登录状态与购物车状态
-		// - 提高组件间状态同步效率，避免 prop drilling
-
 		// TODO: 项目部署与优化
 		// - 使用 Docker 制作前后端镜像
 		// - 使用 Nginx 配置反向代理与静态资源服务
 		// - 配置 CI/CD 流水线，例如 GitHub Actions
+
+		// TODO: 实现首页个性化商品推荐功能
+		// - 接入后端 /api/v1/recommend 接口，返回基于用户兴趣或热门商品列表
+		// - 使用 SWR 或 React Query 实现数据请求与缓存，避免重复请求
+		// - 将推荐商品列表存入全局状态管理（如 Zustand），提升页面切换时数据复用效率
+		// - 支持未登录用户展示默认热门推荐，已登录用户展示个性化推荐
+		// - 增加 loading 和空状态 UI 提示，提升用户体验
+
+		// TODO: 接入全局状态管理
+		// - 使用 Zustand 或 Redux Toolkit 管理登录状态与购物车状态
+		// - 提高组件间状态同步效率，避免 prop drilling
 
 		// 管理员用户管理
 		admin := user.Group("/admin")
