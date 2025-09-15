@@ -12,3 +12,6 @@ export const searchAll = (page: number = 1, pageSize: number = 10) =>
 
 export const getProductDetail = (id: number) =>
     get(`${baseURL}/api/v1/search/detail/${id}`)
+
+export const getSuggestions = (query: string, n: number = 8, options?: SearchOptions) =>
+    get(`${baseURL}/api/v1/suggest?q=${encodeURIComponent(query)}&n=${n}`, options)

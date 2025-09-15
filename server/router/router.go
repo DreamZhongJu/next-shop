@@ -1,6 +1,8 @@
 package router
 
 import (
+	"strings"
+
 	"github.com/DreamZhongJu/next-shop/controllers"
 	"github.com/DreamZhongJu/next-shop/middleware" // 新增中间件导入
 	"github.com/gin-contrib/cors"
@@ -14,11 +16,34 @@ func Router() *gin.Engine {
 	r.StaticFS("/uploads", gin.Dir("./uploads", false))
 
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://192.168.1.15:3000", "http://localhost:3000"},
+		AllowOrigins:     []string{"http://localhost:3000", "http://127.0.0.1:3000", "http://0.0.0.0:3000"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
+		AllowOriginFunc: func(origin string) bool {
+			// 允许所有本地开发环境的请求（192.168.x.x, 10.x.x.x, 172.16.x.x-172.31.x.x）
+			return strings.HasPrefix(origin, "http://localhost") ||
+				strings.HasPrefix(origin, "http://127.0.0.1") ||
+				strings.HasPrefix(origin, "http://192.168.") ||
+				strings.HasPrefix(origin, "http://10.") ||
+				strings.HasPrefix(origin, "http://172.16.") ||
+				strings.HasPrefix(origin, "http://172.17.") ||
+				strings.HasPrefix(origin, "http://172.18.") ||
+				strings.HasPrefix(origin, "http://172.19.") ||
+				strings.HasPrefix(origin, "http://172.20.") ||
+				strings.HasPrefix(origin, "http://172.21.") ||
+				strings.HasPrefix(origin, "http://172.22.") ||
+				strings.HasPrefix(origin, "http://172.23.") ||
+				strings.HasPrefix(origin, "http://172.24.") ||
+				strings.HasPrefix(origin, "http://172.25.") ||
+				strings.HasPrefix(origin, "http://172.26.") ||
+				strings.HasPrefix(origin, "http://172.27.") ||
+				strings.HasPrefix(origin, "http://172.28.") ||
+				strings.HasPrefix(origin, "http://172.29.") ||
+				strings.HasPrefix(origin, "http://172.30.") ||
+				strings.HasPrefix(origin, "http://172.31.")
+		},
 	}))
 
 	// 添加日志和恢复中间件
@@ -32,6 +57,7 @@ func Router() *gin.Engine {
 		user.POST("/search", controllers.UserSearch{}.Search)
 		user.GET("/search/all", controllers.UserSearch{}.SearchAll)
 		user.GET("/search/detail/:id", controllers.UserSearch{}.GetProductDetail)
+		user.GET("/suggest", (&controllers.SuggestController{}).GetSuggestions) // 搜索联想建议
 
 		// 嵌套购物车
 		cart := user.Group("/cart")
