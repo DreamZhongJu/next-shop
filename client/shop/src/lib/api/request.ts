@@ -5,7 +5,7 @@ interface RequestOptions {
     [key: string]: any;
 }
 
-export const baseURL = 'http://192.168.1.15:8080'
+export const baseURL = 'http://127.0.0.1:8080'
 
 // 获取本地存储的 token
 function getAuthToken() {
