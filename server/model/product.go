@@ -98,3 +98,16 @@ func GetTotalStock() (int, error) {
 	err := dao.GetDB().Model(&Product{}).Select("COALESCE(SUM(stock), 0)").Scan(&totalStock).Error
 	return totalStock, err
 }
+
+// GetProductsByCategoryID returns products under a given category id.
+// Products store the category name string, so we resolve the name from categories first.
+func GetProductsByCategoryID(categoryID int) ([]Product, error) {
+	var category Category
+	if err := dao.GetDB().First(&category, categoryID).Error; err != nil {
+		return nil, err
+	}
+
+	var products []Product
+	err := dao.GetDB().Where("category = ?", category.Name).Find(&products).Error
+	return products, err
+}

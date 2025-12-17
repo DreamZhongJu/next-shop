@@ -58,6 +58,9 @@ func Router() *gin.Engine {
 		user.GET("/search/all", controllers.UserSearch{}.SearchAll)
 		user.GET("/search/detail/:id", controllers.UserSearch{}.GetProductDetail)
 		user.GET("/suggest", (&controllers.SuggestController{}).GetSuggestions) // 搜索联想建议
+		user.GET("/categories", controllers.CategoryController{}.List)
+		user.GET("/categories/:level1_id/level2", controllers.CategoryController{}.ListLevel2)
+		user.GET("/categories/level2/:level2_id/products", controllers.CategoryController{}.Products)
 
 		// 嵌套购物车
 		cart := user.Group("/cart")
