@@ -140,18 +140,25 @@ class _CategoryPageState extends State<CategoryPage> with AutomaticKeepAliveClie
                 ),
                 itemCount: _rightCateList.length,
                 itemBuilder: (context,index){
-                  return Container(
-                    child: Column(
-                      children: [
-                        AspectRatio(
-                          aspectRatio: 1/1,
-                          child: Image.network("https://picsum.photos/64/64",fit: BoxFit.cover,),
-                        ),
-                        Container(
-                          height: 32.h,
-                          child: Text(_rightCateList[index].name),
-                        )
-                      ],
+                  return InkWell(
+                    onTap: (){
+                      Navigator.pushNamed(context, '/productList',arguments: {
+                        "cid":this._rightCateList[index].id
+                      });
+                    },
+                    child: Container(
+                      child: Column(
+                        children: [
+                          AspectRatio(
+                            aspectRatio: 1/1,
+                            child: Image.network("https://picsum.photos/64/64",fit: BoxFit.cover,),
+                          ),
+                          Container(
+                            height: 32.h,
+                            child: Text(_rightCateList[index].name),
+                          )
+                        ],
+                      ),
                     ),
                   );
                 },
