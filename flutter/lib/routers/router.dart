@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_jdshop/pages/ProductList.dart';
 import 'package:flutter_jdshop/pages/search.dart';
 import '../pages/tabs/Tabs.dart';
 
@@ -6,6 +7,7 @@ import '../pages/tabs/Tabs.dart';
 final Map<String, WidgetBuilder> routes = {
   '/': (context) => Tabs(),
   '/search':(context) => SearchPage(),
+  '/productList':(context,{arguments}) => ProductListPage(arguments:arguments),
 };
 
 // 固定写法
