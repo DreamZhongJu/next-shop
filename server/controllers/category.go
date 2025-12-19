@@ -31,7 +31,7 @@ func (cc CategoryController) Products(c *gin.Context) {
 	if page < 1 {
 		page = 1
 	}
-	pageSize := 10
+	pageSize := 8
 	sort := c.DefaultQuery("sort", "default")
 
 	products, total, err := model.GetPaginatedProductsByCategoryID(id, page, pageSize, sort)

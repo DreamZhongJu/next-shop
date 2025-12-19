@@ -21,6 +21,9 @@ class _ProductListPageState extends State<ProductListPage> {
   //Scafford key
   final GlobalKey<ScaffoldState> _scaffoldkey = new GlobalKey<ScaffoldState>();
 
+  //用于上拉分页
+  ScrollController _scrollController = ScrollController();
+
   //分页
   int _page = 1;
 
@@ -32,16 +35,36 @@ class _ProductListPageState extends State<ProductListPage> {
   //排序
   String _sort = "default";
 
+  //设置信号值，解决重复问题
+  bool flag = true;
+
   @override
   void initState() {
     super.initState();
     _getProductListData();
+
+    //监听滚动条滚动事件
+    _scrollController.addListener((){
+      // _scrollController.position.pixels; //获取滚动条滚动高度
+      // _scrollController.position.maxScrollExtent; //获取页面高度
+
+      if(_scrollController.position.pixels>_scrollController.position.maxScrollExtent-20){
+        if(this.flag) {
+          _getProductListData();
+        }
+      }
+    });
   }
 
   //获取商品列表的数据
   _getProductListData() async {
+
+    setState(() {
+      this.flag = false;
+    });
+
     final api =
-        '${Config.domain}/categories/level2/${widget.arguments["cid"]}/products?page=${_page}&sort=${this._sort}';
+        '${Config.domain}/categories/level2/${widget.arguments["cid"]}/products?page=${this._page}&sort=${this._sort}';
     final res = await Dio().get(api);
 
     final resp = ApiResponse<List<ProductModel>>.fromJson(
@@ -56,6 +79,8 @@ class _ProductListPageState extends State<ProductListPage> {
     }
     setState(() {
       this._productList.addAll(resp.data);
+      this._page++;
+      this.flag = true;
     });
   }
 
@@ -147,6 +172,7 @@ class _ProductListPageState extends State<ProductListPage> {
         padding: EdgeInsets.all(10),
         margin: EdgeInsets.only(top: 80.h),
         child: ListView.builder(
+          controller: _scrollController,
           itemCount: this._productList.length,
           itemBuilder: (context, index) {
             return Column(
@@ -201,6 +227,7 @@ class _ProductListPageState extends State<ProductListPage> {
                   ],
                 ),
                 Divider(height: 20),
+                (index==this._productList.length-1&&!this.flag)?Loadingwidget():Text("")
               ],
             );
           },
