@@ -27,13 +27,20 @@ func (cc CategoryController) Products(c *gin.Context) {
 		return
 	}
 
-	products, err := model.GetProductsByCategoryID(id)
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if page < 1 {
+		page = 1
+	}
+	pageSize := 10
+	sort := c.DefaultQuery("sort", "default")
+
+	products, total, err := model.GetPaginatedProductsByCategoryID(id, page, pageSize, sort)
 	if err != nil {
 		ReturnError(c, 404, "获取分类商品失败: "+err.Error())
 		return
 	}
 
-	ReturnSuccess(c, 0, "获取分类商品成功", products, int64(len(products)))
+	ReturnSuccess(c, 0, "获取分类商品成功", products, total)
 }
 
 // ListLevel2 returns all level-2 categories (existing categories table) without authentication.

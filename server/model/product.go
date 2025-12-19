@@ -1,6 +1,7 @@
 package model
 
 import (
+	"strings"
 	"time"
 
 	"github.com/DreamZhongJu/next-shop/dao"
@@ -110,4 +111,36 @@ func GetProductsByCategoryID(categoryID int) ([]Product, error) {
 	var products []Product
 	err := dao.GetDB().Where("category = ?", category.Name).Find(&products).Error
 	return products, err
+}
+
+// GetPaginatedProductsByCategoryID returns paginated products under a given category id.
+// sort can be: default, price_asc, price_desc, stock_asc, stock_desc.
+func GetPaginatedProductsByCategoryID(categoryID int, page, pageSize int, sort string) ([]Product, int64, error) {
+	var category Category
+	if err := dao.GetDB().First(&category, categoryID).Error; err != nil {
+		return nil, 0, err
+	}
+
+	sort = strings.ToLower(strings.TrimSpace(sort))
+	orderClause := "id desc"
+	switch sort {
+	case "price_asc":
+		orderClause = "price asc"
+	case "price_desc":
+		orderClause = "price desc"
+	case "stock_asc":
+		orderClause = "stock asc"
+	case "stock_desc":
+		orderClause = "stock desc"
+	}
+
+	var total int64
+	if err := dao.GetDB().Model(&Product{}).Where("category = ?", category.Name).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	var products []Product
+	err := dao.GetDB().Where("category = ?", category.Name).Order(orderClause).Offset(offset).Limit(pageSize).Find(&products).Error
+	return products, total, err
 }
