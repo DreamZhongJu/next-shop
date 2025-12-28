@@ -21,15 +21,17 @@ class ProductModel {
         this.updatedAt});
 
   ProductModel.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    name = json['name'];
-    description = json['description'];
-    price = json['price'];
-    stock = json['stock'];
-    imageUrl = json['image_url'];
-    category = json['category'];
-    createdAt = json['created_at'];
-    updatedAt = json['updated_at'];
+    id = (json['id'] ?? json['ID']) as int?;
+    name = (json['name'] ?? json['Name']) as String?;
+    description = (json['description'] ?? json['Description']) as String?;
+    final rawPrice = json['price'] ?? json['Price'];
+    price = rawPrice is num ? rawPrice.toDouble() : null;
+    final rawStock = json['stock'] ?? json['Stock'];
+    stock = rawStock is num ? rawStock.toInt() : null;
+    imageUrl = (json['image_url'] ?? json['ImageURL']) as String?;
+    category = (json['category'] ?? json['Category']) as String?;
+    createdAt = (json['created_at'] ?? json['CreatedAt'])?.toString();
+    updatedAt = (json['updated_at'] ?? json['UpdatedAt'])?.toString();
   }
 
   Map<String, dynamic> toJson() {
