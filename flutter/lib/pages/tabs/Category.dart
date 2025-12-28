@@ -268,11 +268,14 @@ class _CategoryPageState extends State<CategoryPage>
                       ),
                     ),
                     SizedBox(height: 8.h),
-                    Text(
-                      item.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12),
+                    SizedBox(
+                      height: 18.h,
+                      child: Text(
+                        item.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12),
+                      ),
                     ),
                   ],
                 ),
@@ -289,7 +292,7 @@ class _CategoryPageState extends State<CategoryPage>
     super.build(context);
     final leftWidth = ScreenAdapter.width(context) / 4;
     final rightItemWidth = (ScreenAdapter.width(context) - leftWidth - 24) / 3;
-    final rightItemHeight = rightItemWidth + 28.h;
+    final rightItemHeight = rightItemWidth + 40.h;
 
     return ScreenAdapter.init(
       child: Row(

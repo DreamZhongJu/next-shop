@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_jdshop/config/Config.dart';
 import 'package:flutter_jdshop/model/ProductModel.dart';
 import 'package:flutter_jdshop/services/ApiService.dart';
 import 'package:flutter_jdshop/services/AppState.dart';
-import 'package:flutter_jdshop/widget/ProductCard.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:provider/provider.dart';
@@ -39,20 +39,17 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     });
 
     try {
-      final response = await _apiService.get('/search/detail/${widget.productId}');
-      
-      if (response.code == 0 && response.data is Map<String, dynamic>) {
-        final productData = response.data as Map<String, dynamic>;
-        final product = ProductModel.fromJson(productData);
-        
+      final response = await _apiService.get<ProductModel>(
+        '/search/detail/${widget.productId}',
+        fromJson: (raw) => ProductModel.fromJson(raw as Map<String, dynamic>),
+      );
+
+      if (response.code == 0) {
+        final product = response.data;
+        final resolvedImage = Config.resolveImage(product.imageUrl);
         setState(() {
           _product = product;
-          _imageUrls = [
-            product.imageUrl ?? 'https://picsum.photos/400/400',
-            'https://picsum.photos/400/401',
-            'https://picsum.photos/400/402',
-            'https://picsum.photos/400/403',
-          ];
+          _imageUrls = resolvedImage.isEmpty ? [] : [resolvedImage];
           _isLoading = false;
         });
       } else {
@@ -62,7 +59,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         });
       }
     } catch (e) {
-      debugPrint('加载商品详情失败: $e');
+      debugPrint('load product detail failed: $e');
       setState(() {
         _loadError = true;
         _isLoading = false;
@@ -76,7 +73,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         baseColor: Colors.grey.shade300,
         highlightColor: Colors.grey.shade100,
         child: Container(
-          height: 400,
+          height: 360,
           width: double.infinity,
           color: Colors.white,
         ),
@@ -85,7 +82,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
 
     if (_loadError || _imageUrls.isEmpty) {
       return Container(
-        height: 400,
+        height: 360,
         color: Colors.grey.shade100,
         child: const Center(
           child: Icon(
@@ -100,12 +97,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     return Column(
       children: [
         Container(
-          height: 400,
+          height: 360,
           width: double.infinity,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-          ),
+          color: Colors.white,
           child: CachedNetworkImage(
             imageUrl: _imageUrls[_selectedImageIndex],
             fit: BoxFit.contain,
@@ -114,7 +108,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               highlightColor: Colors.grey.shade100,
               child: Container(
                 width: double.infinity,
-                height: 400,
+                height: 360,
                 color: Colors.white,
               ),
             ),
@@ -130,9 +124,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         SizedBox(
-          height: 80,
+          height: 70,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: _imageUrls.length,
@@ -144,8 +138,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   });
                 },
                 child: Container(
-                  width: 80,
-                  height: 80,
+                  width: 70,
+                  height: 70,
                   margin: const EdgeInsets.only(right: 12),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
@@ -229,7 +223,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         padding: EdgeInsets.all(16),
         child: Center(
           child: Text(
-            '商品信息加载失败',
+            'Product info failed to load',
             style: TextStyle(
               color: Colors.grey,
               fontSize: 16,
@@ -282,7 +276,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               ),
               const Spacer(),
               Text(
-                '库存: ${product.stock ?? 0}',
+                'Stock: ${product.stock ?? 0}',
                 style: const TextStyle(
                   color: Colors.green,
                   fontSize: 14,
@@ -295,7 +289,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           Row(
             children: [
               Text(
-                '\$${product.price?.toStringAsFixed(2) ?? '0.00'}',
+                'CNY ${product.price?.toStringAsFixed(2) ?? '0.00'}',
                 style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -304,7 +298,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               ),
               const SizedBox(width: 12),
               Text(
-                '\$${(product.price ?? 0) * 1.3}',
+                'CNY ${((product.price ?? 0) * 1.3).toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontSize: 18,
                   color: Colors.grey,
@@ -333,7 +327,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           ),
           const SizedBox(height: 24),
           const Text(
-            '商品描述',
+            'Description',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -350,18 +344,18 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           ),
           const SizedBox(height: 24),
           const Text(
-            '规格参数',
+            'Specs',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 12),
-          _buildSpecItem('品牌', 'JD Shop'),
-          _buildSpecItem('型号', 'JD-${product.id}'),
-          _buildSpecItem('分类', product.category ?? '未分类'),
-          _buildSpecItem('重量', '1.2kg'),
-          _buildSpecItem('尺寸', '30 × 20 × 10 cm'),
+          _buildSpecItem('Brand', 'JD Shop'),
+          _buildSpecItem('Model', 'JD-${product.id}'),
+          _buildSpecItem('Category', product.category ?? 'Unknown'),
+          _buildSpecItem('Weight', '1.2kg'),
+          _buildSpecItem('Size', '30 x 20 x 10 cm'),
         ],
       ),
     );
@@ -407,7 +401,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           const Text(
-            '数量',
+            'Quantity',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
@@ -432,9 +426,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   ),
                 ),
               ),
-              Container(
+              SizedBox(
                 width: 60,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Text(
                   _quantity.toString(),
                   textAlign: TextAlign.center,
@@ -489,7 +482,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('已添加到购物车'),
+                      content: Text('Added to cart'),
                       duration: Duration(seconds: 2),
                     ),
                   );
@@ -503,7 +496,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 side: BorderSide(color: Colors.blue.shade500),
               ),
               child: const Text(
-                '加入购物车',
+                'Add to cart',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -534,7 +527,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 ),
               ),
               child: const Text(
-                '立即购买',
+                'Buy now',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -552,7 +545,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('商品详情'),
+        title: const Text('Product Detail'),
         actions: [
           IconButton(
             icon: const Icon(Icons.share),
