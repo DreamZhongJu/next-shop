@@ -1,15 +1,10 @@
-import 'dart:math';
-
-import 'package:dio/dio.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_jdshop/config/Config.dart';
-import 'package:flutter_jdshop/model/FocusModel.dart';
+import 'package:flutter_jdshop/model/CateModle.dart';
+import 'package:flutter_jdshop/services/ApiService.dart';
 import 'package:flutter_jdshop/services/ScreenAdaper.dart';
+import 'package:flutter_jdshop/services/StorageService.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
-import '../../model/CateModle.dart';
-import '../../model/RequestModel.dart';
 
 class CategoryPage extends StatefulWidget {
   const CategoryPage({super.key});
@@ -18,183 +13,294 @@ class CategoryPage extends StatefulWidget {
   State<CategoryPage> createState() => _CategoryPageState();
 }
 
-class _CategoryPageState extends State<CategoryPage> with AutomaticKeepAliveClientMixin {
+class _CategoryPageState extends State<CategoryPage>
+    with AutomaticKeepAliveClientMixin {
+  final ApiService _apiService = ApiService();
+  final StorageService _storageService = StorageService();
+  final Map<int, List<CateLevel2ItemModel>> _rightCache = {};
 
   int _selectIndex = 0;
+  List<CateItemModel> _leftCateList = [];
+  List<CateLevel2ItemModel> _rightCateList = [];
+  bool _loadingLeft = false;
+  bool _loadingRight = false;
+  bool _loadError = false;
 
   @override
   void initState() {
     super.initState();
-    _getLeftCateData();
+    _loadLeftCateData();
   }
 
-  List<CateItemModel> _leftCateList = [];
-  bool _loading = false;
-  _getLeftCateData() async {
-    setState(() => _loading = true);
+  Future<void> _loadLeftCateData() async {
+    setState(() {
+      _loadingLeft = true;
+      _loadError = false;
+    });
 
     try {
-      final api = '${Config.domain}/categories';
-      final res = await Dio().get(api);
+      final shouldRefresh = await _storageService.shouldRefreshCategories();
+      if (!shouldRefresh) {
+        final cached = await _storageService.getCategories();
+        if (cached.isNotEmpty) {
+          final parsed = cached
+              .map((e) => CateItemModel.fromJson(e as Map<String, dynamic>))
+              .toList();
+          if (mounted) {
+            setState(() {
+              _leftCateList = parsed;
+            });
+          }
+          if (parsed.isNotEmpty) {
+            await _loadRightCateData(parsed.first.id);
+          }
+        }
+      }
+    } catch (_) {}
 
-      final resp = ApiResponse<List<CateItemModel>>.fromJson(
-        res.data as Map<String, dynamic>,
-            (raw) => (raw as List)
+    try {
+      final response = await _apiService.get<List<CateItemModel>>(
+        '/categories',
+        fromJson: (raw) => (raw as List)
             .map((e) => CateItemModel.fromJson(e as Map<String, dynamic>))
             .toList(),
       );
 
-      if (resp.code != 0) {
-        throw Exception(resp.msg);
+      if (response.code != 0) {
+        throw Exception(response.msg);
       }
 
-      setState(() {
-        _leftCateList = resp.data;
-        _loading = false;
-      });
+      await _storageService.saveCategories(
+        response.data.map((e) => e.toJson()).toList(),
+      );
+
+      if (mounted) {
+        setState(() {
+          _leftCateList = response.data;
+          _loadingLeft = false;
+        });
+      }
+
+      if (_leftCateList.isNotEmpty) {
+        await _loadRightCateData(_leftCateList.first.id);
+      }
     } catch (e) {
-      setState(() => _loading = false);
-      debugPrint('get categories error: $e');
+      if (mounted) {
+        setState(() {
+          _loadError = _leftCateList.isEmpty;
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingLeft = false;
+        });
+      }
     }
-    //print(_leftCateList[0].name);
-    _getRightCateData(_leftCateList[0].id);
   }
 
-  List<CateLevel2ItemModel> _rightCateList = [];
-  _getRightCateData(pid) async {
-    setState(() => _loading = true);
+  Future<void> _loadRightCateData(int pid) async {
+    if (_rightCache.containsKey(pid)) {
+      setState(() {
+        _rightCateList = _rightCache[pid] ?? [];
+      });
+      return;
+    }
+
+    setState(() {
+      _loadingRight = true;
+    });
 
     try {
-      final api = '${Config.domain}/categories/${pid}/level2';
-      final res = await Dio().get(api);
-
-      final resp = ApiResponse<List<CateLevel2ItemModel>>.fromJson(
-        res.data as Map<String, dynamic>,
-            (raw) => (raw as List)
+      final response = await _apiService.get<List<CateLevel2ItemModel>>(
+        '/categories/$pid/level2',
+        fromJson: (raw) => (raw as List)
             .map((e) => CateLevel2ItemModel.fromJson(e as Map<String, dynamic>))
             .toList(),
       );
 
-      if (resp.code != 0) {
-        throw Exception(resp.msg);
+      if (response.code != 0) {
+        throw Exception(response.msg);
       }
 
-      setState(() {
-        _rightCateList = resp.data;
-        _loading = false;
-      });
+      _rightCache[pid] = response.data;
+      if (mounted) {
+        setState(() {
+          _rightCateList = response.data;
+        });
+      }
     } catch (e) {
-      setState(() => _loading = false);
-      debugPrint('get categories error: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingRight = false;
+        });
+      }
     }
-    //print(_rightCateList[0].name);
   }
 
-  Widget _leftCateWidget(leftWidth){
+  Widget _leftCateWidget(double leftWidth) {
+    if (_loadingLeft) {
+      return SizedBox(
+        width: leftWidth,
+        child: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
 
-    return Container(
-      padding: EdgeInsets.all(10.w),
+    if (_loadError) {
+      return SizedBox(
+        width: leftWidth,
+        child: Center(
+          child: TextButton(
+            onPressed: _loadLeftCateData,
+            child: const Text('点击重试'),
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
       width: leftWidth,
       child: ListView.builder(
         itemCount: _leftCateList.length,
-        itemBuilder: (context,index){
-          return Column(
-            children: [
-              InkWell(
-                onTap: (){
-                  setState(() {
-                    _selectIndex = index;
-                    this._getRightCateData(_selectIndex+1);
-                  });
-                },
-                child: Container(
-                  child: Text(_leftCateList[index].name),
-                  width: double.infinity,
-                  padding: EdgeInsets.only(top: 24.h),
-                  height: 84.h,
-                  color: _selectIndex==index?Color.fromRGBO(240, 246, 246, 0.9):Colors.white,
+        itemBuilder: (context, index) {
+          final selected = _selectIndex == index;
+          return InkWell(
+            onTap: () {
+              setState(() {
+                _selectIndex = index;
+              });
+              _loadRightCateData(_leftCateList[index].id);
+            },
+            child: Container(
+              padding: EdgeInsets.symmetric(vertical: 18.h, horizontal: 10.w),
+              decoration: BoxDecoration(
+                color: selected ? const Color(0xFFF2F7F5) : Colors.white,
+                border: Border(
+                  left: BorderSide(
+                    color: selected ? Colors.red : Colors.transparent,
+                    width: 3,
+                  ),
+                  bottom: BorderSide(
+                    color: Colors.grey.shade200,
+                    width: 1,
+                  ),
                 ),
               ),
-              Divider(height: 1.h,)
-            ],
+              child: Text(
+                _leftCateList[index].name,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                  color: selected ? Colors.red.shade400 : Colors.black87,
+                ),
+              ),
+            ),
           );
         },
       ),
-      height: double.infinity,
     );
   }
 
-  Widget _rightCateWidget(rightItemWidth,rightItemHeight){
-    if(this._rightCateList.length>0){
-      return
-        Expanded(
-          flex: 1,
-          child: Container(
-              height: double.infinity,
-              color: Color.fromRGBO(240, 246, 246, 0.9),
-              child: GridView.builder(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    childAspectRatio: rightItemWidth/rightItemHeight,
-                    crossAxisSpacing: 10
-                ),
-                itemCount: _rightCateList.length,
-                itemBuilder: (context,index){
-                  return InkWell(
-                    onTap: (){
-                      Navigator.pushNamed(context, '/productList',arguments: {
-                        "cid":this._rightCateList[index].id
-                      });
-                    },
-                    child: Container(
-                      child: Column(
-                        children: [
-                          AspectRatio(
-                            aspectRatio: 1/1,
-                            child: Image.network("https://picsum.photos/64/64",fit: BoxFit.cover,),
-                          ),
-                          Container(
-                            height: 32.h,
-                            child: Text(_rightCateList[index].name),
-                          )
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              )
-          ),
-        );
+  Widget _rightCateWidget(double rightItemWidth, double rightItemHeight) {
+    if (_loadingRight) {
+      return const Expanded(
+        child: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_rightCateList.isEmpty) {
+      return const Expanded(
+        child: Center(
+          child: Text('暂无分类'),
+        ),
+      );
     }
 
     return Expanded(
-      flex: 1,
       child: Container(
-        padding: EdgeInsets.all(10),
-          height: double.infinity,
-          color: Color.fromRGBO(240, 246, 246, 0.9),
-        child: Text("加载中"),
+        color: const Color(0xFFF7F9F8),
+        child: GridView.builder(
+          padding: EdgeInsets.all(12.w),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            childAspectRatio: rightItemWidth / rightItemHeight,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+          ),
+          itemCount: _rightCateList.length,
+          itemBuilder: (context, index) {
+            final item = _rightCateList[index];
+            return InkWell(
+              onTap: () {
+                Navigator.pushNamed(context, '/productList', arguments: {
+                  'cid': item.id,
+                });
+              },
+              child: Container(
+                padding: EdgeInsets.all(10.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    AspectRatio(
+                      aspectRatio: 1 / 1,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: CachedNetworkImage(
+                          imageUrl:
+                              'https://picsum.photos/seed/cate${item.id}/200/200',
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      item.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
-    var leftWidth = ScreenAdapter.width(context)/4;
-    var rightItemWidth = (ScreenAdapter.width(context) - leftWidth-20-20)/3;
-    var rightItemHeight = rightItemWidth+20.h+32.h;
+    super.build(context);
+    final leftWidth = ScreenAdapter.width(context) / 4;
+    final rightItemWidth = (ScreenAdapter.width(context) - leftWidth - 24) / 3;
+    final rightItemHeight = rightItemWidth + 28.h;
 
     return ScreenAdapter.init(
-        child: Row(
-      children: [
-        _leftCateWidget(leftWidth),
-        _rightCateWidget(rightItemWidth, rightItemHeight)
-      ],
-    ));
+      child: Row(
+        children: [
+          _leftCateWidget(leftWidth),
+          _rightCateWidget(rightItemWidth, rightItemHeight),
+        ],
+      ),
+    );
   }
 
   @override
   bool get wantKeepAlive => true;
 }
-

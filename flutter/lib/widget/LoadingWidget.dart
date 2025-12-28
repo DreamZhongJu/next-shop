@@ -16,7 +16,7 @@ class Loadingwidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = text ?? "加载中...";
+    final label = text ?? '加载中...';
 
     return Center(
       child: Column(

@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_jdshop/pages/tabs/Cart.dart';
 import 'package:flutter_jdshop/pages/tabs/Category.dart';
@@ -13,62 +12,72 @@ class Tabs extends StatefulWidget {
 }
 
 class _TabsState extends State<Tabs> {
-  int _currentIndex = 1;
-  var _pageController;
-  List<Widget> _pageList = [
+  int _currentIndex = 0;
+  late final PageController _pageController;
+  final List<Widget> _pageList = const [
     HomePage(),
     CategoryPage(),
     CartPage(),
     UserPage(),
   ];
+  final List<String> _titles = const ['首页', '分类', '购物车', '我的'];
 
   @override
   void initState() {
-    _pageController = new PageController(initialPage: _currentIndex);
+    _pageController = PageController(initialPage: _currentIndex);
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("jsshop"),
+        title: Text(_titles[_currentIndex]),
       ),
       body: PageView(
         controller: _pageController,
-        children: this._pageList,
-        onPageChanged: (index){
-          _currentIndex = index;
+        children: _pageList,
+        onPageChanged: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
         },
       ),
       bottomNavigationBar: BottomNavigationBar(
         fixedColor: Colors.red,
-      currentIndex: this._currentIndex,
-      onTap: (index){
+        currentIndex: _currentIndex,
+        onTap: (index) {
           setState(() {
-            this._currentIndex=index;
+            _currentIndex = index;
             _pageController.jumpToPage(_currentIndex);
           });
-      },
-          type: BottomNavigationBarType.fixed,
-      items: [
-        BottomNavigationBarItem(
+        },
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(
             icon: Icon(Icons.home),
-            label: "首页"
-        ),
-        BottomNavigationBarItem(
+            label: '首页',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.category),
-            label: "分类"
-        ),
-        BottomNavigationBarItem(
+            label: '分类',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.shopping_cart),
-            label: "购物车"
-        ),
-        BottomNavigationBarItem(
+            label: '购物车',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.people),
-            label: "我的"
-        )
-      ]),
+            label: '我的',
+          ),
+        ],
+      ),
     );
   }
 }

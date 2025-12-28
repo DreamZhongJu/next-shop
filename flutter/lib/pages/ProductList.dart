@@ -1,87 +1,131 @@
-import 'package:dio/dio.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_jdshop/model/ProductModel.dart';
+import 'package:flutter_jdshop/config/Config.dart';
+import 'package:flutter_jdshop/services/ApiService.dart';
 import 'package:flutter_jdshop/services/ScreenAdaper.dart';
 import 'package:flutter_jdshop/widget/LoadingWidget.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../config/Config.dart';
 import '../model/RequestModel.dart';
 
 class ProductListPage extends StatefulWidget {
-  Map arguments;
-  ProductListPage({super.key, required this.arguments});
+  final Map arguments;
+  const ProductListPage({super.key, required this.arguments});
 
   @override
   State<ProductListPage> createState() => _ProductListPageState();
 }
 
 class _ProductListPageState extends State<ProductListPage> {
-  //Scafford key
-  final GlobalKey<ScaffoldState> _scaffoldkey = new GlobalKey<ScaffoldState>();
+  final GlobalKey<ScaffoldState> _scaffoldkey = GlobalKey<ScaffoldState>();
+  final ScrollController _scrollController = ScrollController();
+  final ApiService _apiService = ApiService();
 
-  //用于上拉分页
-  ScrollController _scrollController = ScrollController();
-
-  //分页
   int _page = 1;
-
-  //数据
+  String _sort = 'default';
+  bool _isLoading = false;
+  bool _hasMore = true;
   List<ProductModel> _productList = [];
-  /*
-  sort 可选：default、price_asc、price_desc、stock_asc、stock_desc
-  */
-  //排序
-  String _sort = "default";
-
-  //设置信号值，解决重复问题
-  bool flag = true;
 
   @override
   void initState() {
     super.initState();
-    _getProductListData();
-
-    //监听滚动条滚动事件
-    _scrollController.addListener((){
-      // _scrollController.position.pixels; //获取滚动条滚动高度
-      // _scrollController.position.maxScrollExtent; //获取页面高度
-
-      if(_scrollController.position.pixels>_scrollController.position.maxScrollExtent-20){
-        if(this.flag) {
+    _getProductListData(reset: true);
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >
+          _scrollController.position.maxScrollExtent - 20) {
+        if (_hasMore && !_isLoading) {
           _getProductListData();
         }
       }
     });
   }
 
-  //获取商品列表的数据
-  _getProductListData() async {
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
+  Future<void> _getProductListData({bool reset = false}) async {
+    if (_isLoading) return;
     setState(() {
-      this.flag = false;
+      _isLoading = true;
     });
 
-    final api =
-        '${Config.domain}/categories/level2/${widget.arguments["cid"]}/products?page=${this._page}&sort=${this._sort}';
-    final res = await Dio().get(api);
-
-    final resp = ApiResponse<List<ProductModel>>.fromJson(
-      res.data as Map<String, dynamic>,
-      (raw) => (raw as List)
-          .map((e) => ProductModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
-    );
-
-    if (resp.code != 0) {
-      throw Exception(resp.msg);
+    if (reset) {
+      _page = 1;
+      _productList = [];
+      _hasMore = true;
     }
+
+    try {
+      final cid = widget.arguments['cid'];
+      final response = await _apiService.get<List<ProductModel>>(
+        '/categories/level2/$cid/products',
+        queryParameters: {
+          'page': _page,
+          'sort': _sort,
+        },
+        fromJson: (raw) => (raw as List)
+            .map((e) => ProductModel.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+
+      if (response.code != 0) {
+        throw Exception(response.msg);
+      }
+
+      final newItems = response.data;
+      setState(() {
+        _productList.addAll(newItems);
+        _page++;
+        if (response.count != null) {
+          _hasMore = _productList.length < response.count!;
+        } else {
+          _hasMore = newItems.isNotEmpty;
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _hasMore = false;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _setSort(String value) {
+    if (_sort == value) return;
     setState(() {
-      this._productList.addAll(resp.data);
-      this._page++;
-      this.flag = true;
+      _sort = value;
     });
+    _getProductListData(reset: true);
+  }
+
+  Widget _sortItem(String label, String value) {
+    final active = _sort == value;
+    return Expanded(
+      child: InkWell(
+        onTap: () => _setSort(value),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(0, 16.h, 0, 20.h),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: active ? Colors.red : Colors.black87,
+              fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _subHeaderWidget() {
@@ -93,71 +137,35 @@ class _ProductListPageState extends State<ProductListPage> {
         height: 80.h,
         width: 750.w,
         decoration: BoxDecoration(
+          color: Colors.white,
           border: Border(
             bottom: BorderSide(
               width: 1,
-              color: Color.fromRGBO(233, 233, 233, 0.9),
+              color: const Color.fromRGBO(233, 233, 233, 0.9),
             ),
           ),
         ),
         child: Row(
           children: [
+            _sortItem('综合', 'default'),
+            _sortItem('价格升序', 'price_asc'),
+            _sortItem('价格降序', 'price_desc'),
             Expanded(
-              flex: 1,
               child: InkWell(
-                child: Padding(
-                  padding: EdgeInsetsGeometry.fromLTRB(0, 16.h, 0, 20.h),
-                  child: Text(
-                    "综合",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.red),
-                  ),
-                ),
-                onTap: () {},
-              ),
-            ),
-            Expanded(
-              flex: 1,
-              child: InkWell(
-                child: Padding(
-                  padding: EdgeInsetsGeometry.fromLTRB(0, 16.h, 0, 20.h),
-                  child: Text(
-                    "销量",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.red),
-                  ),
-                ),
-                onTap: () {},
-              ),
-            ),
-            Expanded(
-              flex: 1,
-              child: InkWell(
-                child: Padding(
-                  padding: EdgeInsetsGeometry.fromLTRB(0, 16.h, 0, 20.h),
-                  child: Text(
-                    "价格",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.red),
-                  ),
-                ),
-                onTap: () {},
-              ),
-            ),
-            Expanded(
-              flex: 1,
-              child: InkWell(
-                child: Padding(
-                  padding: EdgeInsetsGeometry.fromLTRB(0, 16.h, 0, 20.h),
-                  child: Text(
-                    "筛选",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.red),
-                  ),
-                ),
                 onTap: () {
                   _scaffoldkey.currentState?.openEndDrawer();
                 },
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(0, 16.h, 0, 20.h),
+                  child: Text(
+                    '筛选',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.blue.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
@@ -167,76 +175,96 @@ class _ProductListPageState extends State<ProductListPage> {
   }
 
   Widget _productListWidget() {
-    if (this._productList.length > 0) {
-      return Container(
-        padding: EdgeInsets.all(10),
-        margin: EdgeInsets.only(top: 80.h),
-        child: ListView.builder(
-          controller: _scrollController,
-          itemCount: this._productList.length,
-          itemBuilder: (context, index) {
-            return Column(
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 180.w,
-                      height: 180.h,
-                      child: Image.network(
-                        "https://picsum.photos/64/64",
+    if (_productList.isEmpty && _isLoading) {
+      return const Loadingwidget();
+    }
+
+    if (_productList.isEmpty) {
+      return const Center(
+        child: Text('暂无商品'),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      margin: EdgeInsets.only(top: 80.h),
+      child: ListView.builder(
+        controller: _scrollController,
+        itemCount: _productList.length + (_hasMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == _productList.length) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Loadingwidget(),
+            );
+          }
+          final item = _productList[index];
+          return Column(
+            children: [
+              Row(
+                children: [
+                  SizedBox(
+                    width: 180.w,
+                    height: 180.h,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: CachedNetworkImage(
+                        imageUrl: Config.resolveImage(item.imageUrl) == ''
+                            ? 'https://picsum.photos/seed/p${item.id}/200'
+                            : Config.resolveImage(item.imageUrl),
                         fit: BoxFit.cover,
                       ),
                     ),
-                    Expanded(
-                      flex: 1,
-                      child: Container(
-                        height: 180.h,
-                        margin: EdgeInsets.only(left: 10),
-                        //color: Colors.red,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "${this._productList[index].name}",
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Row(
-                              children: [
-                                Text(
-                                  "${_productList[index].price}",
-                                  style: const TextStyle(color: Colors.red, fontSize: 16),
+                  ),
+                  Expanded(
+                    child: Container(
+                      height: 180.h,
+                      margin: const EdgeInsets.only(left: 10),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.name ?? '未命名商品',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Row(
+                            children: [
+                              Text(
+                                '￥${item.price?.toStringAsFixed(2) ?? '0.00'}',
+                                style: const TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 16,
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    "库存：${_productList[index].stock}",
-                                    style: const TextStyle(color: Colors.blue, fontSize: 12),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    textAlign: TextAlign.right,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  '库存：${item.stock ?? 0}',
+                                  style: const TextStyle(
+                                    color: Colors.blue,
+                                    fontSize: 12,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.right,
                                 ),
-                              ],
-                            )
-                          ],
-                        ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-                Divider(height: 20),
-                (index==this._productList.length-1&&!this.flag)?Loadingwidget():Text("")
-              ],
-            );
-          },
-        ),
-      );
-    } else {
-      //加载中
-      return Loadingwidget();
-    }
+                  ),
+                ],
+              ),
+              const Divider(height: 20),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -244,10 +272,18 @@ class _ProductListPageState extends State<ProductListPage> {
     return ScreenAdapter.init(
       child: Scaffold(
         key: _scaffoldkey,
-        appBar: AppBar(title: Text("商品列表"), actions: [Text("")]),
-        endDrawer: Drawer(child: Container(child: Text("实现筛选功能"))),
-        //body: Text("${widget.arguments}"),
-        body: Stack(children: [_productListWidget(), _subHeaderWidget()]),
+        appBar: AppBar(title: const Text('商品列表'), actions: const [Text('')]),
+        endDrawer: Drawer(
+          child: Center(
+            child: Text(
+              '筛选功能开发中',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+          ),
+        ),
+        body: Stack(
+          children: [_productListWidget(), _subHeaderWidget()],
+        ),
       ),
     );
   }

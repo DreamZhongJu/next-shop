@@ -1,10 +1,16 @@
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:dio/dio.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_jdshop/model/FocusModel.dart';
-import 'package:flutter_jdshop/services/ScreenAdaper.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_jdshop/model/ProductModel.dart';
+import 'package:flutter_jdshop/config/Config.dart';
+import 'package:flutter_jdshop/services/ApiService.dart';
+import 'package:flutter_jdshop/services/StorageService.dart';
+import 'package:flutter_jdshop/widget/ProductCard.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_jdshop/services/AppState.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -14,221 +20,342 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin {
+  final RefreshController _refreshController = RefreshController();
+  final ApiService _apiService = ApiService();
+  final StorageService _storageService = StorageService();
 
-
-
-  /// 轮播图数据，**永远不是 null**，初始就是空列表
-  List<FocusModel> focusData = <FocusModel>[];
-
-  /// 加载状态
-  bool _isLoadingSwiper = false;
-
-  /// 是否加载失败（可选）
+  List<FocusModel> _focusData = [];
+  List<ProductModel> _featuredProducts = [];
+  List<ProductModel> _recommendedProducts = [];
+  bool _isLoading = true;
   bool _loadError = false;
 
   @override
   void initState() {
     super.initState();
-    _getFocusData();
+    _loadData();
   }
 
-  /// 请求轮播图数据
-  Future<void> _getFocusData() async {
+  @override
+  void dispose() {
+    _refreshController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadData() async {
     setState(() {
-      _isLoadingSwiper = true;
+      _isLoading = true;
       _loadError = false;
     });
 
     try {
-      const api = 'https://jsonplaceholder.typicode.com/photos?_limit=10';
-      final response = await Dio().get(api);
-
-      final data = response.data;
-      if (data is List) {
-        final list = FocusModel.fromJsonList(data);
-        setState(() {
-          focusData = list; // 这里一定是一个 List<FocusModel>，不是 null
-        });
-      } else {
-        debugPrint('接口返回的不是 List：$data');
+      await Future.wait([
+        _loadFocusData(),
+        _loadFeaturedProducts(),
+        _loadRecommendedProducts(),
+      ]);
+    } catch (e) {
+      if (mounted) {
         setState(() {
           _loadError = true;
         });
       }
-    } catch (e) {
-      debugPrint('获取轮播图数据失败: $e');
-      setState(() {
-        _loadError = true;
-      });
     } finally {
       if (mounted) {
         setState(() {
-          _isLoadingSwiper = false;
+          _isLoading = false;
         });
       }
     }
   }
 
-  // 轮播图
-  Widget _swiperWidget() {
-    // 1. 正在加载 & 还没数据
-    if (_isLoadingSwiper && focusData.isEmpty) {
-      return SizedBox(
-        height: 150.h,
-        child: const Center(child: CircularProgressIndicator()),
-      );
+  List<dynamic> _extractList(dynamic data) {
+    if (data is Map<String, dynamic>) {
+      final list = data['data'];
+      if (list is List) {
+        return list;
+      }
+      return [];
     }
+    if (data is List) {
+      return data;
+    }
+    return [];
+  }
 
-    // 2. 加载失败 & 没有数据 —— 给个提示/兜底图
-    if (_loadError && focusData.isEmpty) {
-      return SizedBox(
-        height: 150.h,
-        child: GestureDetector(
-          onTap: _getFocusData, // 点一下重新加载
-          child: const Center(
-            child: Text('轮播图加载失败，点击重试'),
+  List<FocusModel> _buildFocusFromProducts(List<dynamic> products) {
+    return products.take(5).map((raw) {
+      final map = raw as Map<String, dynamic>;
+      final id = (map['id'] as num?)?.toInt() ?? 0;
+      final title = map['name'] as String? ?? '精选商品';
+      final image = map['image_url'] as String?;
+      final fallback = 'https://picsum.photos/seed/focus$id/800/400';
+      final url = (image != null && image.isNotEmpty)
+          ? Config.resolveImage(image)
+          : fallback;
+      return FocusModel(
+        id: id,
+        title: title,
+        url: url,
+        thumbnailUrl: url,
+      );
+    }).toList();
+  }
+
+  Future<void> _loadFocusData() async {
+    try {
+      final shouldRefresh = await _storageService.shouldRefreshProducts();
+      if (!shouldRefresh) {
+        final cachedData = await _storageService.getProducts();
+        if (cachedData.isNotEmpty) {
+          if (mounted) {
+            setState(() {
+              _focusData = _buildFocusFromProducts(cachedData);
+            });
+          }
+        }
+      }
+    } catch (_) {}
+
+    try {
+      final response = await _apiService.get(
+        '/search/all',
+        queryParameters: {'page': 1, 'pageSize': 6},
+      );
+      final products = _extractList(response.data);
+      if (response.code == 0 && products.isNotEmpty) {
+        await _storageService.saveProducts(products);
+        if (mounted) {
+          setState(() {
+            _focusData = _buildFocusFromProducts(products);
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _focusData = [];
+        });
+      }
+    }
+  }
+
+  Future<void> _loadFeaturedProducts() async {
+    try {
+      final response = await _apiService.get(
+        '/search/all',
+        queryParameters: {'page': 1, 'pageSize': 6},
+      );
+
+      final products = _extractList(response.data)
+          .map((item) => ProductModel.fromJson(item))
+          .toList();
+
+      if (mounted) {
+        setState(() {
+          _featuredProducts = products;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _featuredProducts = [];
+        });
+      }
+    }
+  }
+
+  Future<void> _loadRecommendedProducts() async {
+    try {
+      final response = await _apiService.get(
+        '/search/all',
+        queryParameters: {'page': 1, 'pageSize': 12},
+      );
+
+      final products = _extractList(response.data)
+          .map((item) => ProductModel.fromJson(item))
+          .toList();
+
+      if (mounted) {
+        setState(() {
+          _recommendedProducts = products;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _recommendedProducts = [];
+        });
+      }
+    }
+  }
+
+  void _onRefresh() async {
+    await _loadData();
+    _refreshController.refreshCompleted();
+  }
+
+  void _onLoading() async {
+    await Future.delayed(const Duration(milliseconds: 1000));
+    _refreshController.loadComplete();
+  }
+
+  Widget _buildSwiper() {
+    if (_isLoading) {
+      return Shimmer.fromColors(
+        baseColor: Colors.grey.shade300,
+        highlightColor: Colors.grey.shade100,
+        child: Container(
+          height: 200,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
       );
     }
 
-    // 3. 没出错，就是暂时还没拿到数据（极端情况）
-    if (focusData.isEmpty) {
-      return SizedBox(
-        height: 150.h,
-        child: Image.network(
-          'https://picsum.photos/350/150',
-          fit: BoxFit.cover,
-          width: double.infinity,
+    if (_loadError || _focusData.isEmpty) {
+      return Container(
+        height: 200,
+        width: double.infinity,
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              color: Colors.grey,
+              size: 48,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '加载失败',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: _loadData,
+              child: const Text('重试'),
+            ),
+          ],
         ),
       );
     }
 
-    // 4. 有数据，正常轮播
-    return AspectRatio(
-      aspectRatio: 2 / 1, // 宽高比
+    return Container(
+      height: 200,
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: CarouselSlider.builder(
-        itemCount: focusData.length,
+        itemCount: _focusData.length,
         itemBuilder: (context, index, realIndex) {
-          final item = focusData[index];
-          return Image.network(
-            item.url, // 接口返回的大图
-            fit: BoxFit.cover,
-            width: double.infinity,
+          final item = _focusData[index];
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                CachedNetworkImage(
+                  imageUrl: item.url,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  placeholder: (context, url) => Shimmer.fromColors(
+                    baseColor: Colors.grey.shade300,
+                    highlightColor: Colors.grey.shade100,
+                    child: Container(
+                      width: double.infinity,
+                      height: 200,
+                      color: Colors.white,
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    color: Colors.grey.shade200,
+                    child: const Center(
+                      child: Icon(
+                        Icons.image_not_supported_outlined,
+                        color: Colors.grey,
+                        size: 48,
+                      ),
+                    ),
+                  ),
+                ),
+                Container(
+                  alignment: Alignment.bottomLeft,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.6),
+                      ],
+                    ),
+                  ),
+                  child: Text(
+                    item.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           );
         },
         options: CarouselOptions(
-          height: 150.h,
+          height: 200,
           viewportFraction: 1.0,
           autoPlay: true,
+          autoPlayInterval: const Duration(seconds: 3),
+          autoPlayAnimationDuration: const Duration(milliseconds: 800),
+          autoPlayCurve: Curves.fastOutSlowIn,
         ),
       ),
     );
   }
 
-  Widget _titleWidget(String value) {
-    return Container(
-      height: 32.h,
-      margin: const EdgeInsets.only(left: 10),
-      padding: const EdgeInsets.only(left: 10),
-      decoration: BoxDecoration(
-        border: Border(
-          left: BorderSide(
-            color: Colors.red,
-            width: 10.w,
-          ),
-        ),
-      ),
-      child: Text(
-        value,
-        style: const TextStyle(color: Colors.black54),
-      ),
-    );
-  }
-
-  // 热门商品
-  Widget _hotProductListWidget() {
-    return SizedBox(
-      height: 160.h,
-      width: double.infinity,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: 10,
-        itemBuilder: (context, index) {
-          return SizedBox(
-            width: 140.w,
-            child: Column(
-              children: [
-                Expanded(
-                  child: Image.network(
-                    'https://picsum.photos/64/64',
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text('第$index条'),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  // 推荐商品
-  Widget _recProductItemWidget() {
-    final itemWidth = (ScreenAdapter.width(context) - 30) / 2;
-
-    return Container(
-      padding: const EdgeInsets.all(10),
-      width: itemWidth,
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: Colors.black12,
-          width: 1,
-        ),
-      ),
-      child: Column(
+  Widget _buildSectionTitle(String title, String subtitle) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          SizedBox(
-            width: double.infinity,
-            child: Image.network(
-              'https://picsum.photos/64/64',
-              fit: BoxFit.cover,
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          Padding(
-            padding: EdgeInsets.only(top: 20.h),
-            child: const Text(
-              '这是标题这是标题这是标题这是标题',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: Colors.black54),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.only(top: 20.h),
-            child: Stack(
-              children: const [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    '123',
-                    style: TextStyle(color: Colors.red, fontSize: 16),
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    '180',
-                    style: TextStyle(
-                      color: Colors.black54,
-                      fontSize: 14,
-                      decoration: TextDecoration.lineThrough,
-                    ),
-                  ),
-                )
-              ],
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.blue.shade600,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -236,36 +363,191 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      children: <Widget>[
-        _swiperWidget(),
-        const SizedBox(height: 10),
-        _titleWidget('猜你喜欢'),
-        const SizedBox(height: 10),
-        _hotProductListWidget(),
-        const SizedBox(height: 10),
-        _titleWidget('热门推荐'),
-        Container(
-          padding: const EdgeInsets.all(10),
-          child: Wrap(
-            runSpacing: 10,
-            spacing: 10,
-            children: [
-              _recProductItemWidget(),
-              _recProductItemWidget(),
-              _recProductItemWidget(),
-              _recProductItemWidget(),
-              _recProductItemWidget(),
-              _recProductItemWidget(),
-              _recProductItemWidget(),
-              _recProductItemWidget(),
-              _recProductItemWidget(),
-            ],
+  Widget _buildFeaturedProducts() {
+    if (_isLoading) {
+      return SizedBox(
+        height: 220,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: 6,
+          itemBuilder: (context, index) {
+            return const Padding(
+              padding: EdgeInsets.only(right: 12),
+              child: ProductCardSkeleton(),
+            );
+          },
+        ),
+      );
+    }
+
+    if (_featuredProducts.isEmpty) {
+      return Container(
+        height: 220,
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Center(
+          child: Text(
+            '暂无特色商品',
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 16,
+            ),
           ),
         ),
-      ],
+      );
+    }
+
+    return SizedBox(
+      height: 220,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: _featuredProducts.length,
+        itemBuilder: (context, index) {
+          final product = _featuredProducts[index];
+          return Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: SizedBox(
+              width: 160,
+              child: ProductCard(
+                imageUrl: Config.resolveImage(product.imageUrl) ==
+                        ''
+                    ? 'https://picsum.photos/seed/f$index/200'
+                    : Config.resolveImage(product.imageUrl),
+                title: product.name ?? '未命名商品',
+                price: product.price ?? 0.0,
+                originalPrice: (product.price ?? 0.0) * 1.2,
+                rating: 4.5,
+                reviewCount: 128,
+                onTap: () {
+                  Navigator.pushNamed(context, '/productDetail', arguments: {
+                    'productId': product.id,
+                  });
+                },
+                onFavoriteTap: () {
+                  Provider.of<AppState>(context, listen: false);
+                },
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildRecommendedProducts() {
+    if (_isLoading) {
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.7,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: 6,
+        itemBuilder: (context, index) {
+          return const ProductCardSkeleton();
+        },
+      );
+    }
+
+    if (_recommendedProducts.isEmpty) {
+      return Container(
+        height: 300,
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Center(
+          child: Text(
+            '暂无推荐商品',
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 16,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.7,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: _recommendedProducts.length,
+      itemBuilder: (context, index) {
+        final product = _recommendedProducts[index];
+        return ProductCard(
+          imageUrl: Config.resolveImage(product.imageUrl) == ''
+              ? 'https://picsum.photos/seed/r$index/200'
+              : Config.resolveImage(product.imageUrl),
+          title: product.name ?? '未命名商品',
+          price: product.price ?? 0.0,
+          originalPrice: (product.price ?? 0.0) * 1.3,
+          rating: 4.0 + (index % 5) * 0.2,
+          reviewCount: 50 + index * 10,
+          onTap: () {
+            Navigator.pushNamed(context, '/productDetail', arguments: {
+              'productId': product.id,
+            });
+          },
+          onFavoriteTap: () {
+            Provider.of<AppState>(context, listen: false);
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return SmartRefresher(
+      controller: _refreshController,
+      onRefresh: _onRefresh,
+      onLoading: _onLoading,
+      enablePullDown: true,
+      enablePullUp: false,
+      header: const ClassicHeader(
+        idleText: '下拉刷新',
+        releaseText: '释放刷新',
+        refreshingText: '刷新中...',
+        completeText: '刷新完成',
+        failedText: '刷新失败',
+        idleIcon: Icon(Icons.arrow_downward, color: Colors.grey),
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 16),
+            _buildSwiper(),
+            const SizedBox(height: 24),
+            _buildSectionTitle('特色商品', '查看全部'),
+            const SizedBox(height: 12),
+            _buildFeaturedProducts(),
+            const SizedBox(height: 24),
+            _buildSectionTitle('热门推荐', '更多推荐'),
+            const SizedBox(height: 12),
+            _buildRecommendedProducts(),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
     );
   }
 
