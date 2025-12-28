@@ -12,11 +12,17 @@ class CateItemModel {
   });
 
   factory CateItemModel.fromJson(Map<String, dynamic> json) {
+    final createdRaw = json['created_at']?.toString() ?? '';
+    final updatedRaw = json['updated_at']?.toString() ?? '';
+    final created = DateTime.tryParse(createdRaw) ??
+        DateTime.fromMillisecondsSinceEpoch(0);
+    final updated = DateTime.tryParse(updatedRaw) ??
+        DateTime.fromMillisecondsSinceEpoch(0);
     return CateItemModel(
       id: (json['id'] as num).toInt(),
       name: (json['name'] ?? '') as String,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      createdAt: created,
+      updatedAt: updated,
     );
   }
 
