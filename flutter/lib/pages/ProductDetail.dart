@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_jdshop/config/Config.dart';
 import 'package:flutter_jdshop/model/ProductModel.dart';
 import 'package:flutter_jdshop/services/ApiService.dart';
-import 'package:flutter_jdshop/services/AppState.dart';
+import 'package:flutter_jdshop/services/StorageService.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:provider/provider.dart';
 import 'package:badges/badges.dart' as badges;
 
 class ProductDetailPage extends StatefulWidget {
@@ -19,6 +18,7 @@ class ProductDetailPage extends StatefulWidget {
 
 class _ProductDetailPageState extends State<ProductDetailPage> {
   final ApiService _apiService = ApiService();
+  final StorageService _storageService = StorageService();
   ProductModel? _product;
   bool _isLoading = true;
   bool _loadError = false;
@@ -65,6 +65,20 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         _isLoading = false;
       });
     }
+  }
+
+  int? _extractUserId(Map<String, dynamic> userData) {
+    final user = userData['user'];
+    if (user is Map<String, dynamic>) {
+      final raw = user['user_id'] ?? user['UserID'] ?? user['id'] ?? user['ID'];
+      if (raw is num) {
+        return raw.toInt();
+      }
+      if (raw is String) {
+        return int.tryParse(raw);
+      }
+    }
+    return null;
   }
 
   Widget _buildImageGallery() {
@@ -219,7 +233,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         padding: EdgeInsets.all(16),
         child: Center(
           child: Text(
-            'Product info failed to load',
+            '商品信息加载失败',
             style: TextStyle(
               color: Colors.grey,
               fontSize: 16,
@@ -272,7 +286,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               ),
               const Spacer(),
               Text(
-                'Stock: ${product.stock ?? 0}',
+                '库存：${product.stock ?? 0}',
                 style: const TextStyle(
                   color: Colors.green,
                   fontSize: 14,
@@ -285,7 +299,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           Row(
             children: [
               Text(
-                'CNY ${product.price?.toStringAsFixed(2) ?? '0.00'}',
+                '￥${product.price?.toStringAsFixed(2) ?? '0.00'}',
                 style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -294,7 +308,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               ),
               const SizedBox(width: 12),
               Text(
-                'CNY ${((product.price ?? 0) * 1.3).toStringAsFixed(2)}',
+                '￥${((product.price ?? 0) * 1.3).toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontSize: 18,
                   color: Colors.grey,
@@ -312,7 +326,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Text(
-                  '30% OFF',
+                  '30% 折',
                   style: TextStyle(
                     color: Colors.red,
                     fontWeight: FontWeight.bold,
@@ -323,7 +337,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           ),
           const SizedBox(height: 24),
           const Text(
-            'Description',
+            '商品描述',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -331,7 +345,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            product.description ?? 'No description available',
+            product.description ?? '暂无描述',
             style: const TextStyle(
               fontSize: 16,
               color: Colors.grey,
@@ -340,18 +354,18 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           ),
           const SizedBox(height: 24),
           const Text(
-            'Specs',
+            '规格参数',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 12),
-          _buildSpecItem('Brand', 'JD Shop'),
-          _buildSpecItem('Model', 'JD-${product.id}'),
-          _buildSpecItem('Category', product.category ?? 'Unknown'),
-          _buildSpecItem('Weight', '1.2kg'),
-          _buildSpecItem('Size', '30 x 20 x 10 cm'),
+          _buildSpecItem('品牌', 'JD Shop'),
+          _buildSpecItem('型号', 'JD-${product.id}'),
+          _buildSpecItem('分类', product.category ?? '未知'),
+          _buildSpecItem('重量', '1.2kg'),
+          _buildSpecItem('尺寸', '30 x 20 x 10 cm'),
         ],
       ),
     );
@@ -397,7 +411,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           const Text(
-            'Quantity',
+            '数量',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
@@ -468,20 +482,54 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         children: [
           Expanded(
             child: OutlinedButton(
-              onPressed: () {
-                final appState = Provider.of<AppState>(context, listen: false);
-                if (_product != null) {
-                  appState.addToCart({
-                    'product': _product!.toJson(),
-                    'quantity': _quantity,
-                    'price': _product!.price,
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Added to cart'),
-                      duration: Duration(seconds: 2),
-                    ),
+              onPressed: () async {
+                final product = _product;
+                if (product == null || product.id == null) {
+                  return;
+                }
+                final userData = await _storageService.getUserData();
+                final token = await _storageService.getUserToken();
+                final userId = _extractUserId(userData);
+                if (token == null || userId == null) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('请先登录')),
+                    );
+                  }
+                  return;
+                }
+                try {
+                  await _apiService.postForm(
+                    '/cart/add',
+                    data: {
+                      'uid': userId.toString(),
+                      'pid': product.id.toString(),
+                      'quantity': _quantity.toString(),
+                    },
                   );
+                  try {
+                    final listResp = await _apiService.get<List<dynamic>>(
+                      '/cart/list/$userId',
+                      fromJson: (raw) => raw as List,
+                    );
+                    if (listResp.code == 0) {
+                      await _storageService.saveCartItems(listResp.data);
+                    }
+                  } catch (_) {}
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('已加入购物车'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                } catch (_) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('加入购物车失败')),
+                    );
+                  }
                 }
               },
               style: OutlinedButton.styleFrom(
@@ -492,7 +540,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 side: BorderSide(color: Colors.blue.shade500),
               ),
               child: const Text(
-                'Add to cart',
+                '加入购物车',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -504,15 +552,54 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           const SizedBox(width: 12),
           Expanded(
             child: ElevatedButton(
-              onPressed: () {
-                final appState = Provider.of<AppState>(context, listen: false);
-                if (_product != null) {
-                  appState.addToCart({
-                    'product': _product!.toJson(),
-                    'quantity': _quantity,
-                    'price': _product!.price,
-                  });
-                  Navigator.pushNamed(context, '/cart');
+              onPressed: () async {
+                final product = _product;
+                if (product == null || product.id == null) {
+                  return;
+                }
+                final userData = await _storageService.getUserData();
+                final token = await _storageService.getUserToken();
+                final userId = _extractUserId(userData);
+                if (token == null || userId == null) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('请先登录')),
+                    );
+                  }
+                  return;
+                }
+                try {
+                  await _apiService.postForm(
+                    '/cart/add',
+                    data: {
+                      'uid': userId.toString(),
+                      'pid': product.id.toString(),
+                      'quantity': _quantity.toString(),
+                    },
+                  );
+                  try {
+                    final listResp = await _apiService.get<List<dynamic>>(
+                      '/cart/list/$userId',
+                      fromJson: (raw) => raw as List,
+                    );
+                    if (listResp.code == 0) {
+                      await _storageService.saveCartItems(listResp.data);
+                    }
+                  } catch (_) {}
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('已加入购物车'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                } catch (_) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('加入购物车失败')),
+                    );
+                  }
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -523,7 +610,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 ),
               ),
               child: const Text(
-                'Buy now',
+                '立即购买',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -541,7 +628,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Product Detail'),
+        title: const Text('商品详情'),
         actions: [
           IconButton(
             icon: const Icon(Icons.share),

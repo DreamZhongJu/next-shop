@@ -103,7 +103,7 @@ class ProductCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        '${((originalPrice! - price) / originalPrice! * 100).toStringAsFixed(0)}% OFF',
+                        '${((originalPrice! - price) / originalPrice! * 100).toStringAsFixed(0)}% 折',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 10,
@@ -134,7 +134,7 @@ class ProductCard extends StatelessWidget {
                     children: [
                       Flexible(
                         child: Text(
-                          'CNY ${price.toStringAsFixed(2)}',
+                          '￥${price.toStringAsFixed(2)}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -148,7 +148,7 @@ class ProductCard extends StatelessWidget {
                         Padding(
                           padding: const EdgeInsets.only(left: 6),
                           child: Text(
-                            'CNY ${originalPrice!.toStringAsFixed(2)}',
+                            '￥${originalPrice!.toStringAsFixed(2)}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -205,7 +205,7 @@ class ProductCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Text(
-                          'Buy',
+                          '购买',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,

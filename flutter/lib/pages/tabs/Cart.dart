@@ -32,6 +32,7 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
   bool _isLoading = false;
   bool _isGuest = false;
   int? _userId;
+  bool _checkingLogin = false;
 
   @override
   void initState() {
@@ -45,66 +46,72 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
       _isGuest = false;
     });
 
-    final cached = await _storageService.getCartItems();
-    if (cached.isNotEmpty) {
-      final parsed = cached
-          .map((e) => e as Map<String, dynamic>)
-          .map((item) => _CartItemView(
-                productId: (item['product_id'] as num?)?.toInt() ?? 0,
-                quantity: (item['quantity'] as num?)?.toInt() ?? 1,
-              ))
-          .toList();
-      setState(() {
-        _items = parsed;
-      });
-      await _loadProductDetails(parsed);
-    }
-
-    final userData = await _storageService.getUserData();
-    final token = await _storageService.getUserToken();
-    final user = userData['user'];
-    _userId = user is Map<String, dynamic> ? user['user_id'] : null;
-
-    if (token == null || _userId == null) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _isGuest = true;
-        });
-      }
-      return;
-    }
-
     try {
-      final response = await _apiService.get<List<dynamic>>(
-        '/cart/list/$_userId',
-        fromJson: (raw) => raw as List,
-      );
-
-      if (response.code != 0) {
-        throw Exception(response.msg);
+      try {
+        final cached = await _storageService.getCartItems();
+        if (cached.isNotEmpty) {
+          final parsed = cached
+              .map((e) => e as Map<String, dynamic>)
+              .map((item) => _CartItemView(
+                    productId: (item['product_id'] as num?)?.toInt() ?? 0,
+                    quantity: (item['quantity'] as num?)?.toInt() ?? 1,
+                  ))
+              .toList();
+          if (mounted) {
+            setState(() {
+              _items = parsed;
+            });
+          }
+          await _loadProductDetails(parsed);
+        }
+      } catch (_) {
+        await _storageService.saveCartItems([]);
       }
 
-      await _storageService.saveCartItems(response.data);
-      final parsed = response.data
-          .map((e) => e as Map<String, dynamic>)
-          .map((item) => _CartItemView(
-                productId: (item['product_id'] as num?)?.toInt() ?? 0,
-                quantity: (item['quantity'] as num?)?.toInt() ?? 1,
-              ))
-          .toList();
+      final userData = await _storageService.getUserData();
+      final token = await _storageService.getUserToken();
+      _userId = _extractUserId(userData);
 
-      if (mounted) {
-        setState(() {
-          _items = parsed;
-        });
+      if (token == null || _userId == null) {
+        if (mounted) {
+          setState(() {
+            _isGuest = true;
+          });
+        }
+        return;
       }
-      await _loadProductDetails(parsed);
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _isGuest = false;
-        });
+
+      try {
+        final response = await _apiService.get<List<dynamic>>(
+          '/cart/list/$_userId',
+          fromJson: (raw) => raw as List,
+        );
+
+        if (response.code != 0) {
+          throw Exception(response.msg);
+        }
+
+        await _storageService.saveCartItems(response.data);
+        final parsed = response.data
+            .map((e) => e as Map<String, dynamic>)
+            .map((item) => _CartItemView(
+                  productId: (item['product_id'] as num?)?.toInt() ?? 0,
+                  quantity: (item['quantity'] as num?)?.toInt() ?? 1,
+                ))
+            .toList();
+
+        if (mounted) {
+          setState(() {
+            _items = parsed;
+          });
+        }
+        await _loadProductDetails(parsed);
+      } catch (_) {
+        if (mounted) {
+          setState(() {
+            _isGuest = false;
+          });
+        }
       }
     } finally {
       if (mounted) {
@@ -113,6 +120,43 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
         });
       }
     }
+  }
+
+  int? _extractUserId(Map<String, dynamic> userData) {
+    final user = userData['user'];
+    if (user is Map<String, dynamic>) {
+      final raw = user['user_id'] ?? user['UserID'] ?? user['id'] ?? user['ID'];
+      if (raw is num) {
+        return raw.toInt();
+      }
+      if (raw is String) {
+        return int.tryParse(raw);
+      }
+    }
+    final raw = userData['user_id'] ??
+        userData['UserID'] ??
+        userData['id'] ??
+        userData['ID'];
+    if (raw is num) {
+      return raw.toInt();
+    }
+    if (raw is String) {
+      return int.tryParse(raw);
+    }
+    return null;
+  }
+
+  Future<void> _checkLoginAndReload() async {
+    if (_checkingLogin) return;
+    _checkingLogin = true;
+    final userData = await _storageService.getUserData();
+    final token = await _storageService.getUserToken();
+    final userId = _extractUserId(userData);
+    if (token != null && userId != null) {
+      _userId = userId;
+      await _loadCart();
+    }
+    _checkingLogin = false;
   }
 
   Future<void> _loadProductDetails(List<_CartItemView> items) async {
@@ -168,13 +212,15 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
 
     if (_userId != null) {
       try {
-        await _apiService.put(
+        final token = await _storageService.getUserToken();
+        await _apiService.putForm(
           '/cart/update',
           data: {
             'uid': _userId.toString(),
             'pid': item.productId.toString(),
             'quantity': newQuantity.toString(),
           },
+          headers: token != null ? {'Authorization': token.toString()} : null,
         );
       } catch (_) {}
     }
@@ -193,12 +239,14 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
 
     if (_userId != null) {
       try {
-        await _apiService.post(
+        final token = await _storageService.getUserToken();
+        await _apiService.postForm(
           '/cart/delete',
           data: {
             'uid': _userId.toString(),
             'pid': item.productId.toString(),
           },
+          headers: token != null ? {'Authorization': token.toString()} : null,
         );
       } catch (_) {}
     }
@@ -213,7 +261,8 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
     return total;
   }
 
-  Widget _emptyState(String title, String subtitle) {
+  Widget _emptyState(String title, String subtitle,
+      {VoidCallback? onAction, String? actionText}) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -232,8 +281,8 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
           ),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: _loadCart,
-            child: const Text('Refresh cart'),
+            onPressed: onAction ?? _loadCart,
+            child: Text(actionText ?? '刷新购物车'),
           ),
         ],
       ),
@@ -269,11 +318,24 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
     }
 
     if (_isGuest) {
-      return _emptyState('Please login', 'Sign in to sync your cart');
+      if (!_checkingLogin) {
+        Future.microtask(_checkLoginAndReload);
+      }
+      return _emptyState(
+        '请先登录',
+        '登录后同步云端购物车',
+        actionText: '去登录',
+        onAction: () async {
+          final result = await Navigator.pushNamed(context, '/login');
+          if (result == true) {
+            _loadCart();
+          }
+        },
+      );
     }
 
     if (_items.isEmpty) {
-      return _emptyState('Cart is empty', 'Pick something you like');
+      return _emptyState('购物车为空', '挑选喜欢的商品加入购物车');
     }
 
     return Column(
@@ -336,7 +398,7 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              product?.name ?? 'Loading product',
+                              product?.name ?? '商品加载中',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -346,7 +408,7 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Stock: ${product?.stock ?? 0}',
+                              '库存：${product?.stock ?? 0}',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey.shade600,
@@ -358,7 +420,7 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
                         ),
                       ),
                       Text(
-                        'CNY ${(product?.price ?? 0).toStringAsFixed(2)}',
+                        '￥${(product?.price ?? 0).toStringAsFixed(2)}',
                         style: const TextStyle(
                           color: Colors.red,
                           fontWeight: FontWeight.w600,
@@ -387,7 +449,7 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
             children: [
               Expanded(
                 child: Text(
-                  'Total: CNY ${_totalPrice.toStringAsFixed(2)}',
+                  '合计：￥${_totalPrice.toStringAsFixed(2)}',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -396,7 +458,7 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
               ),
               ElevatedButton(
                 onPressed: () {},
-                child: const Text('Checkout'),
+                child: const Text('结算'),
               ),
             ],
           ),

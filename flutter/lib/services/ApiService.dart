@@ -12,8 +12,11 @@ class ApiService {
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           final token = await _storageService.getUserToken();
-          if (token != null && token.isNotEmpty) {
-            options.headers['Authorization'] = token;
+          if (token != null) {
+            final tokenStr = token.toString();
+            if (tokenStr.isNotEmpty && tokenStr != 'null') {
+              options.headers['Authorization'] = _normalizeToken(tokenStr);
+            }
           }
           handler.next(options);
         },
@@ -30,6 +33,11 @@ class ApiService {
     },
   ));
   final StorageService _storageService = StorageService();
+
+  String _normalizeToken(String token) {
+    if (token.startsWith('Bearer ')) return token;
+    return 'Bearer $token';
+  }
 
   Future<ApiResponse<T>> get<T>(
     String path, {
@@ -85,6 +93,44 @@ class ApiService {
     }
   }
 
+  Future<ApiResponse<T>> postForm<T>(
+    String path, {
+    Map<String, dynamic>? data,
+    Map<String, dynamic>? headers,
+    T Function(dynamic)? fromJson,
+  }) async {
+    try {
+      Map<String, dynamic>? nextHeaders = headers;
+      final auth = headers?['Authorization'];
+      if (auth is String && auth.isNotEmpty) {
+        nextHeaders = Map<String, dynamic>.from(headers ?? {});
+        nextHeaders['Authorization'] = _normalizeToken(auth);
+      }
+      final response = await _dio.post(
+        path,
+        data: data,
+        options: Options(
+          contentType: Headers.formUrlEncodedContentType,
+          headers: nextHeaders,
+        ),
+      );
+
+      if (fromJson != null) {
+        return ApiResponse<T>.fromJson(
+          response.data as Map<String, dynamic>,
+          fromJson,
+        );
+      }
+
+      return ApiResponse<T>.fromJson(
+        response.data as Map<String, dynamic>,
+        (data) => data as T,
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<ApiResponse<T>> put<T>(
     String path, {
     dynamic data,
@@ -103,6 +149,44 @@ class ApiService {
         );
       }
       
+      return ApiResponse<T>.fromJson(
+        response.data as Map<String, dynamic>,
+        (data) => data as T,
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<ApiResponse<T>> putForm<T>(
+    String path, {
+    Map<String, dynamic>? data,
+    Map<String, dynamic>? headers,
+    T Function(dynamic)? fromJson,
+  }) async {
+    try {
+      Map<String, dynamic>? nextHeaders = headers;
+      final auth = headers?['Authorization'];
+      if (auth is String && auth.isNotEmpty) {
+        nextHeaders = Map<String, dynamic>.from(headers ?? {});
+        nextHeaders['Authorization'] = _normalizeToken(auth);
+      }
+      final response = await _dio.put(
+        path,
+        data: data,
+        options: Options(
+          contentType: Headers.formUrlEncodedContentType,
+          headers: nextHeaders,
+        ),
+      );
+
+      if (fromJson != null) {
+        return ApiResponse<T>.fromJson(
+          response.data as Map<String, dynamic>,
+          fromJson,
+        );
+      }
+
       return ApiResponse<T>.fromJson(
         response.data as Map<String, dynamic>,
         (data) => data as T,

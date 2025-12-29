@@ -80,7 +80,10 @@ class StorageService {
     await init();
     final box = Hive.box(_userBox);
     await box.put('user_data', userData);
-    await box.put('user_token', userData['token']);
+    final token = userData['token'] ?? userData['Token'];
+    if (token != null) {
+      await box.put('user_token', token.toString());
+    }
   }
 
   Future<Map<String, dynamic>> getUserData() async {
