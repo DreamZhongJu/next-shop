@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -91,6 +92,47 @@ class StorageService {
     final box = Hive.box(_userBox);
     final userData = box.get('user_data', defaultValue: {});
     return Map<String, dynamic>.from(userData);
+  }
+
+  Future<int?> getUserId() async {
+    final userData = await getUserData();
+    dynamic raw = userData['user_id'] ?? userData['UserID'] ?? userData['id'] ?? userData['ID'];
+    if (raw is num) {
+      return raw.toInt();
+    }
+    if (raw is String) {
+      final parsed = int.tryParse(raw);
+      if (parsed != null) return parsed;
+    }
+    final user = userData['user'];
+    if (user is Map<String, dynamic>) {
+      raw = user['user_id'] ?? user['UserID'] ?? user['id'] ?? user['ID'];
+      if (raw is num) {
+        return raw.toInt();
+      }
+      if (raw is String) {
+        final parsed = int.tryParse(raw);
+        if (parsed != null) return parsed;
+      }
+    }
+    final token = await getUserToken();
+    if (token == null) return null;
+    final parts = token.toString().split('.');
+    if (parts.length != 3) return null;
+    final payload = parts[1];
+    final normalized = base64Url.normalize(payload);
+    try {
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final data = json.decode(decoded);
+      final userId = data['user_id'];
+      if (userId is num) {
+        return userId.toInt();
+      }
+      if (userId is String) {
+        return int.tryParse(userId);
+      }
+    } catch (_) {}
+    return null;
   }
 
   Future<String?> getUserToken() async {

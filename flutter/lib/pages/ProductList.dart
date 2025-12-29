@@ -7,8 +7,6 @@ import 'package:flutter_jdshop/services/ScreenAdaper.dart';
 import 'package:flutter_jdshop/widget/LoadingWidget.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../model/RequestModel.dart';
-
 class ProductListPage extends StatefulWidget {
   final Map arguments;
   const ProductListPage({super.key, required this.arguments});
@@ -87,7 +85,7 @@ class _ProductListPageState extends State<ProductListPage> {
           _hasMore = newItems.isNotEmpty;
         }
       });
-    } catch (e) {
+    } catch (_) {
       setState(() {
         _hasMore = false;
       });
@@ -199,72 +197,81 @@ class _ProductListPageState extends State<ProductListPage> {
             );
           }
           final item = _productList[index];
-          return Column(
-            children: [
-              Row(
-                children: [
-                  SizedBox(
-                    width: 180.w,
-                    height: 180.h,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: CachedNetworkImage(
-                        imageUrl: Config.resolveImage(item.imageUrl) == ''
-                            ? 'https://picsum.photos/seed/p${item.id}/200'
-                            : Config.resolveImage(item.imageUrl),
-                        fit: BoxFit.cover,
-                        errorWidget: (context, url, error) => Image.asset(
-                          Config.defaultProductAsset,
+          return InkWell(
+            onTap: item.id == null
+                ? null
+                : () {
+                    Navigator.pushNamed(context, '/productDetail', arguments: {
+                      'productId': item.id,
+                    });
+                  },
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 180.w,
+                      height: 180.h,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: CachedNetworkImage(
+                          imageUrl: Config.resolveImage(item.imageUrl) == ''
+                              ? 'https://picsum.photos/seed/p${item.id}/200'
+                              : Config.resolveImage(item.imageUrl),
                           fit: BoxFit.cover,
+                          errorWidget: (context, url, error) => Image.asset(
+                            Config.defaultProductAsset,
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  Expanded(
-                    child: Container(
-                      height: 180.h,
-                      margin: const EdgeInsets.only(left: 10),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.name ?? '未命名商品',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Row(
-                            children: [
-                              Text(
-                                '￥${item.price?.toStringAsFixed(2) ?? '0.00'}',
-                                style: const TextStyle(
-                                  color: Colors.red,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  '库存：${item.stock ?? 0}',
+                    Expanded(
+                      child: Container(
+                        height: 180.h,
+                        margin: const EdgeInsets.only(left: 10),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.name ?? '未命名商品',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Row(
+                              children: [
+                                Text(
+                                  '￥${item.price?.toStringAsFixed(2) ?? '0.00'}',
                                   style: const TextStyle(
-                                    color: Colors.blue,
-                                    fontSize: 12,
+                                    color: Colors.red,
+                                    fontSize: 16,
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.right,
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    '库存：${item.stock ?? 0}',
+                                    style: const TextStyle(
+                                      color: Colors.blue,
+                                      fontSize: 12,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.right,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const Divider(height: 20),
-            ],
+                  ],
+                ),
+                const Divider(height: 20),
+              ],
+            ),
           );
         },
       ),

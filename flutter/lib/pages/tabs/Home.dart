@@ -408,7 +408,7 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
           return Padding(
             padding: const EdgeInsets.only(right: 12),
             child: SizedBox(
-              width: 160,
+              width: 140,
               child: ProductCard(
                 imageUrl: Config.resolveImage(product.imageUrl) ==
                         ''
@@ -442,7 +442,7 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 0.7,
+          childAspectRatio: 0.88,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
         ),
@@ -479,7 +479,7 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.7,
+        childAspectRatio: 0.88,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),

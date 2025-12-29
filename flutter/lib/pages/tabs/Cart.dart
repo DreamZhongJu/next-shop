@@ -8,7 +8,7 @@ class CartPage extends StatefulWidget {
   const CartPage({super.key});
 
   @override
-  State<CartPage> createState() => _CartPageState();
+  CartPageState createState() => CartPageState();
 }
 
 class _CartItemView {
@@ -23,7 +23,7 @@ class _CartItemView {
   });
 }
 
-class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin {
+class CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin {
   final ApiService _apiService = ApiService();
   final StorageService _storageService = StorageService();
   final Map<int, ProductModel> _productCache = {};
@@ -37,40 +37,45 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
   @override
   void initState() {
     super.initState();
-    _loadCart();
+    _loadCart(force: true);
   }
 
-  Future<void> _loadCart() async {
+  Future<void> refresh() async {
+    await _loadCart(force: true);
+  }
+
+  Future<void> _loadCart({bool force = false}) async {
     setState(() {
       _isLoading = true;
       _isGuest = false;
     });
 
     try {
-      try {
-        final cached = await _storageService.getCartItems();
-        if (cached.isNotEmpty) {
-          final parsed = cached
-              .map((e) => e as Map<String, dynamic>)
-              .map((item) => _CartItemView(
-                    productId: (item['product_id'] as num?)?.toInt() ?? 0,
-                    quantity: (item['quantity'] as num?)?.toInt() ?? 1,
-                  ))
-              .toList();
-          if (mounted) {
-            setState(() {
-              _items = parsed;
-            });
+      if (!force) {
+        try {
+          final cached = await _storageService.getCartItems();
+          if (cached.isNotEmpty) {
+            final parsed = cached
+                .map((e) => e as Map<String, dynamic>)
+                .map((item) => _CartItemView(
+                      productId: (item['product_id'] as num?)?.toInt() ?? 0,
+                      quantity: (item['quantity'] as num?)?.toInt() ?? 1,
+                    ))
+                .toList();
+            if (mounted) {
+              setState(() {
+                _items = parsed;
+              });
+            }
+            await _loadProductDetails(parsed);
           }
-          await _loadProductDetails(parsed);
+        } catch (_) {
+          await _storageService.saveCartItems([]);
         }
-      } catch (_) {
-        await _storageService.saveCartItems([]);
       }
 
-      final userData = await _storageService.getUserData();
-      final token = await _storageService.getUserToken();
-      _userId = _extractUserId(userData);
+    final token = await _storageService.getUserToken();
+    _userId = await _storageService.getUserId();
 
       if (token == null || _userId == null) {
         if (mounted) {
@@ -122,39 +127,14 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
     }
   }
 
-  int? _extractUserId(Map<String, dynamic> userData) {
-    final user = userData['user'];
-    if (user is Map<String, dynamic>) {
-      final raw = user['user_id'] ?? user['UserID'] ?? user['id'] ?? user['ID'];
-      if (raw is num) {
-        return raw.toInt();
-      }
-      if (raw is String) {
-        return int.tryParse(raw);
-      }
-    }
-    final raw = userData['user_id'] ??
-        userData['UserID'] ??
-        userData['id'] ??
-        userData['ID'];
-    if (raw is num) {
-      return raw.toInt();
-    }
-    if (raw is String) {
-      return int.tryParse(raw);
-    }
-    return null;
-  }
-
   Future<void> _checkLoginAndReload() async {
     if (_checkingLogin) return;
     _checkingLogin = true;
-    final userData = await _storageService.getUserData();
     final token = await _storageService.getUserToken();
-    final userId = _extractUserId(userData);
+    final userId = await _storageService.getUserId();
     if (token != null && userId != null) {
       _userId = userId;
-      await _loadCart();
+      await _loadCart(force: true);
     }
     _checkingLogin = false;
   }
@@ -310,17 +290,54 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
     );
   }
 
+  Widget _buildSummary() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+                child: Row(
+                  children: [
+          Expanded(
+            child: Text(
+              '共 ${_items.length} 件商品',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Text(
+            '合计：￥${_totalPrice.toStringAsFixed(2)}',
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.red,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
+
     if (_isLoading && _items.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
     if (_isGuest) {
-      if (!_checkingLogin) {
-        Future.microtask(_checkLoginAndReload);
-      }
       return _emptyState(
         '请先登录',
         '登录后同步云端购物车',
@@ -328,7 +345,7 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
         onAction: () async {
           final result = await Navigator.pushNamed(context, '/login');
           if (result == true) {
-            _loadCart();
+            _loadCart(force: true);
           }
         },
       );
@@ -338,66 +355,82 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
       return _emptyState('购物车为空', '挑选喜欢的商品加入购物车');
     }
 
-    return Column(
-      children: [
-        Expanded(
-          child: ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: _items.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final item = _items[index];
-              final product = item.product;
-              return Dismissible(
-                key: ValueKey(item.productId),
-                direction: DismissDirection.endToStart,
-                onDismissed: (_) => _removeItem(item),
-                background: Container(
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.only(right: 20),
-                  color: Colors.red.shade400,
-                  child: const Icon(Icons.delete, color: Colors.white),
-                ),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+    return RefreshIndicator(
+      onRefresh: () => _loadCart(force: true),
+      child: Column(
+        children: [
+          _buildSummary(),
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              itemCount: _items.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final item = _items[index];
+                final product = item.product;
+                return Dismissible(
+                  key: ValueKey(item.productId),
+                  direction: DismissDirection.endToStart,
+                  onDismissed: (_) => _removeItem(item),
+                  background: Container(
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade400,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(Icons.delete, color: Colors.white),
                   ),
-                  child: Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: SizedBox(
-                          width: 72,
-                          height: 72,
-                          child: Image.network(
-                            Config.resolveImage(product?.imageUrl) == ''
-                                ? 'https://picsum.photos/seed/cart${item.productId}/200'
-                                : Config.resolveImage(product?.imageUrl),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Image.asset(
-                                Config.defaultProductAsset,
-                                fit: BoxFit.cover,
-                              );
-                            },
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: SizedBox(
+                            width: 72,
+                            height: 72,
+                            child: Image.network(
+                              Config.resolveImage(product?.imageUrl) == ''
+                                  ? 'https://picsum.photos/seed/cart${item.productId}/200'
+                                  : Config.resolveImage(product?.imageUrl),
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Image.asset(
+                                  Config.defaultProductAsset,
+                                  fit: BoxFit.cover,
+                                );
+                              },
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
+                        const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          InkWell(
+                            onTap: product?.id == null
+                                ? null
+                                : () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/productDetail',
+                                      arguments: {'productId': product!.id},
+                                    );
+                                  },
+                            child: Text(
                               product?.name ?? '商品加载中',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -406,64 +439,79 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
+                          ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '库存：${product?.stock ?? 0}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              _quantityControls(item),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '￥${(product?.price ?? 0).toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                             const SizedBox(height: 6),
                             Text(
-                              '库存：${product?.stock ?? 0}',
+                              '小计：￥${((product?.price ?? 0) * item.quantity).toStringAsFixed(2)}',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey.shade600,
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            _quantityControls(item),
                           ],
                         ),
-                      ),
-                      Text(
-                        '￥${(product?.price ?? 0).toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, -4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '合计：￥${_totalPrice.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              );
-            },
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, -4),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '合计：￥${_totalPrice.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+                ElevatedButton(
+                  onPressed: () {},
+                  child: const Text('结算'),
                 ),
-              ),
-              ElevatedButton(
-                onPressed: () {},
-                child: const Text('结算'),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

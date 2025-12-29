@@ -56,8 +56,7 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
   }
 
   bool get _isLoggedIn =>
-      _userData.isNotEmpty ||
-      (_token != null && _token!.isNotEmpty);
+      _userData.isNotEmpty || (_token != null && _token!.isNotEmpty);
 
   String get _displayName {
     final user = _userData['user'];
@@ -115,6 +114,12 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
         _userId = null;
       });
     }
+  }
+
+  void _showTodo() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('功能开发中')),
+    );
   }
 
   Widget _statItem(String label, String value) {
@@ -188,7 +193,7 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
                 ],
               ),
               const Spacer(),
-          TextButton(
+              TextButton(
                 onPressed: _isLoggedIn
                     ? _logout
                     : () async {
@@ -277,11 +282,11 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
         children: [
           _profileHeader(),
           const SizedBox(height: 16),
-          _menuItem(Icons.receipt_long, '我的订单'),
-          _menuItem(Icons.location_on_outlined, '收货地址'),
-          _menuItem(Icons.favorite_border, '收藏夹'),
-          _menuItem(Icons.support_agent, '客服与帮助'),
-          _menuItem(Icons.settings_outlined, '设置'),
+          _menuItem(Icons.receipt_long, '我的订单', onTap: _showTodo),
+          _menuItem(Icons.location_on_outlined, '收货地址', onTap: _showTodo),
+          _menuItem(Icons.favorite_border, '收藏夹', onTap: _showTodo),
+          _menuItem(Icons.support_agent, '客服与帮助', onTap: _showTodo),
+          _menuItem(Icons.settings_outlined, '设置', onTap: _showTodo),
           const SizedBox(height: 24),
         ],
       ),
