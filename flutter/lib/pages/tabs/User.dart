@@ -17,6 +17,8 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
   int _userCount = 0;
   int _cartCount = 0;
   bool _loading = false;
+  String? _token;
+  int? _userId;
 
   @override
   void initState() {
@@ -30,6 +32,8 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
     });
 
     final data = await _storageService.getUserData();
+    _token = await _storageService.getUserToken();
+    _userId = _extractUserId(data);
     final cartItems = await _storageService.getCartItems();
     _cartCount = cartItems.length;
 
@@ -52,13 +56,47 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
   }
 
   bool get _isLoggedIn =>
-      _userData.isNotEmpty && _userData['token'] != null;
+      _userData.isNotEmpty ||
+      (_token != null && _token!.isNotEmpty);
 
   String get _displayName {
     final user = _userData['user'];
-    final username =
-        user is Map<String, dynamic> ? (user['username'] ?? 'Guest') : 'Guest';
-    return username.toString();
+    if (user is Map<String, dynamic>) {
+      final username = user['username'] ?? user['Username'];
+      if (username != null) {
+        return username.toString();
+      }
+    }
+    final topLevel = _userData['username'] ?? _userData['Username'];
+    if (topLevel != null) {
+      return topLevel.toString();
+    }
+    if (_isLoggedIn && _userId != null) {
+      return '用户$_userId';
+    }
+    return '游客';
+  }
+
+  int? _extractUserId(Map<String, dynamic> userData) {
+    final user = userData['user'];
+    if (user is Map<String, dynamic>) {
+      final raw = user['user_id'] ?? user['UserID'] ?? user['id'] ?? user['ID'];
+      if (raw is num) {
+        return raw.toInt();
+      }
+      if (raw is String) {
+        return int.tryParse(raw);
+      }
+    }
+    final raw =
+        userData['user_id'] ?? userData['UserID'] ?? userData['id'] ?? userData['ID'];
+    if (raw is num) {
+      return raw.toInt();
+    }
+    if (raw is String) {
+      return int.tryParse(raw);
+    }
+    return null;
   }
 
   String get _initial {
@@ -73,6 +111,8 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
       setState(() {
         _userData = {};
         _cartCount = 0;
+        _token = null;
+        _userId = null;
       });
     }
   }
@@ -139,7 +179,7 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    _isLoggedIn ? 'Member' : 'Guest mode',
+                    _isLoggedIn ? '会员' : '游客模式',
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.9),
                       fontSize: 12,
@@ -148,13 +188,21 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
                 ],
               ),
               const Spacer(),
-              TextButton(
-                onPressed: _isLoggedIn ? _logout : null,
+          TextButton(
+                onPressed: _isLoggedIn
+                    ? _logout
+                    : () async {
+                        final result =
+                            await Navigator.pushNamed(context, '/login');
+                        if (result == true) {
+                          _loadProfile();
+                        }
+                      },
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.white,
                   backgroundColor: Colors.white.withOpacity(0.2),
                 ),
-                child: Text(_isLoggedIn ? 'Logout' : 'Login'),
+                child: Text(_isLoggedIn ? '退出登录' : '去登录'),
               ),
             ],
           ),
@@ -162,11 +210,22 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _statItem('Users', _userCount.toString()),
-              _statItem('Cart', _cartCount.toString()),
-              _statItem('Orders', '0'),
+              _statItem('用户数', _userCount.toString()),
+              _statItem('购物车', _cartCount.toString()),
+              _statItem('订单', '0'),
             ],
           ),
+          if (_userId != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Text(
+                '用户ID：$_userId',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 12,
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -218,11 +277,11 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
         children: [
           _profileHeader(),
           const SizedBox(height: 16),
-          _menuItem(Icons.receipt_long, 'My orders'),
-          _menuItem(Icons.location_on_outlined, 'Shipping addresses'),
-          _menuItem(Icons.favorite_border, 'Favorites'),
-          _menuItem(Icons.support_agent, 'Support'),
-          _menuItem(Icons.settings_outlined, 'Settings'),
+          _menuItem(Icons.receipt_long, '我的订单'),
+          _menuItem(Icons.location_on_outlined, '收货地址'),
+          _menuItem(Icons.favorite_border, '收藏夹'),
+          _menuItem(Icons.support_agent, '客服与帮助'),
+          _menuItem(Icons.settings_outlined, '设置'),
           const SizedBox(height: 24),
         ],
       ),

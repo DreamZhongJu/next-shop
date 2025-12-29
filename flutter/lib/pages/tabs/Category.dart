@@ -154,7 +154,7 @@ class _CategoryPageState extends State<CategoryPage>
         child: Center(
           child: TextButton(
             onPressed: _loadLeftCateData,
-            child: const Text('Retry'),
+            child: const Text('点击重试'),
           ),
         ),
       );
@@ -215,7 +215,7 @@ class _CategoryPageState extends State<CategoryPage>
     if (_rightCateList.isEmpty) {
       return const Expanded(
         child: Center(
-          child: Text('No categories'),
+          child: Text('暂无分类'),
         ),
       );
     }
@@ -321,7 +321,7 @@ class _CategoryPageState extends State<CategoryPage>
             Icon(Icons.search, color: Colors.grey.shade500),
             const SizedBox(width: 8),
             Text(
-              'Search categories',
+              '搜索分类',
               style: TextStyle(
                 color: Colors.grey.shade500,
                 fontSize: 13,

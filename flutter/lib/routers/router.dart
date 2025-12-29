@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_jdshop/pages/ProductList.dart';
 import 'package:flutter_jdshop/pages/search.dart';
 import 'package:flutter_jdshop/pages/ProductDetail.dart';
+import 'package:flutter_jdshop/pages/Login.dart';
 import '../pages/tabs/Tabs.dart';
 
 // 配置路由
 final Map<String, WidgetBuilder> routes = {
   '/': (context) => Tabs(),
+  '/login': (context) => const LoginPage(),
   '/search':(context) => SearchPage(),
   '/productList':(context,{arguments}) => ProductListPage(arguments:arguments),
   '/productDetail':(context,{arguments}) => ProductDetailPage(productId: arguments['productId']),
