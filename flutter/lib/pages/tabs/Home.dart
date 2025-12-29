@@ -442,7 +442,7 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 0.88,
+          childAspectRatio: 0.72,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
         ),
@@ -479,7 +479,7 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.88,
+        childAspectRatio: 0.72,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
