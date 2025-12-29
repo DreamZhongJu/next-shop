@@ -305,8 +305,8 @@ class CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin {
           ),
         ],
       ),
-                child: Row(
-                  children: [
+      child: Row(
+        children: [
           Expanded(
             child: Text(
               '共 ${_items.length} 件商品',
@@ -360,6 +360,22 @@ class CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin {
       child: Column(
         children: [
           _buildSummary(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: const [
+                Text(
+                  '购物车清单',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  '左滑删除',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
           Expanded(
             child: ListView.separated(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),

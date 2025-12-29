@@ -19,6 +19,7 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
   bool _loading = false;
   String? _token;
   int? _userId;
+  String? _userRole;
 
   @override
   void initState() {
@@ -34,6 +35,7 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
     final data = await _storageService.getUserData();
     _token = await _storageService.getUserToken();
     _userId = _extractUserId(data);
+    _userRole = await _storageService.getUserRole();
     final cartItems = await _storageService.getCartItems();
     _cartCount = cartItems.length;
 
@@ -57,6 +59,8 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
 
   bool get _isLoggedIn =>
       _userData.isNotEmpty || (_token != null && _token!.isNotEmpty);
+
+  bool get _isAdmin => (_userRole ?? '').toLowerCase() == 'admin';
 
   String get _displayName {
     final user = _userData['user'];
@@ -112,6 +116,7 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
         _cartCount = 0;
         _token = null;
         _userId = null;
+        _userRole = null;
       });
     }
   }
@@ -224,7 +229,7 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
             Padding(
               padding: const EdgeInsets.only(top: 10),
               child: Text(
-                '用户ID：$_userId',
+                '用户ID: $_userId',
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.9),
                   fontSize: 12,
@@ -282,10 +287,53 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
         children: [
           _profileHeader(),
           const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: Text(
+              '我的服务',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ),
           _menuItem(Icons.receipt_long, '我的订单', onTap: _showTodo),
           _menuItem(Icons.location_on_outlined, '收货地址', onTap: _showTodo),
           _menuItem(Icons.favorite_border, '收藏夹', onTap: _showTodo),
           _menuItem(Icons.support_agent, '客服与帮助', onTap: _showTodo),
+          if (_isAdmin)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              child: Text(
+                '管理入口',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+            ),
+          if (_isAdmin)
+            _menuItem(
+              Icons.admin_panel_settings_outlined,
+              '进入后台',
+              onTap: () async {
+                await Navigator.pushNamed(context, '/admin');
+                _loadProfile();
+              },
+            ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: Text(
+              '账号设置',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ),
           _menuItem(Icons.settings_outlined, '设置', onTap: _showTodo),
           const SizedBox(height: 24),
         ],
