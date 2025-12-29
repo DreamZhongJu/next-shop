@@ -71,4 +71,5 @@ flutter:
   
   assets:
     - assets/images/
+    - assets/images/default-product.png
     - assets/animations/

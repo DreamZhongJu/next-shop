@@ -286,15 +286,11 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
                       color: Colors.white,
                     ),
                   ),
-                  errorWidget: (context, url, error) => Container(
-                    color: Colors.grey.shade200,
-                    child: const Center(
-                      child: Icon(
-                        Icons.image_not_supported_outlined,
-                        color: Colors.grey,
-                        size: 48,
-                      ),
-                    ),
+                  errorWidget: (context, url, error) => Image.asset(
+                    Config.defaultProductAsset,
+                    width: double.infinity,
+                    height: 200,
+                    fit: BoxFit.cover,
                   ),
                 ),
                 Container(

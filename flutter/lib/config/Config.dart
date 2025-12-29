@@ -1,6 +1,7 @@
 class Config {
   static String domain = 'http://127.0.0.1:8080/api/v1';
   static String imageHost = domain.replaceAll('/api/v1', '');
+  static const String defaultProductAsset = 'assets/images/default-product.png';
 
   static String resolveImage(String? url) {
     if (url == null || url.isEmpty) {

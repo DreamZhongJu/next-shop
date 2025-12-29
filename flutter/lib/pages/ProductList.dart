@@ -213,6 +213,10 @@ class _ProductListPageState extends State<ProductListPage> {
                             ? 'https://picsum.photos/seed/p${item.id}/200'
                             : Config.resolveImage(item.imageUrl),
                         fit: BoxFit.cover,
+                        errorWidget: (context, url, error) => Image.asset(
+                          Config.defaultProductAsset,
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
                   ),
