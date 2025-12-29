@@ -13,7 +13,7 @@ class CartPage extends StatefulWidget {
 
 class _CartItemView {
   final int productId;
-  final int quantity;
+  int quantity;
   ProductModel? product;
 
   _CartItemView({
@@ -31,6 +31,7 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
   List<_CartItemView> _items = [];
   bool _isLoading = false;
   bool _isGuest = false;
+  int? _userId;
 
   @override
   void initState() {
@@ -62,9 +63,9 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
     final userData = await _storageService.getUserData();
     final token = await _storageService.getUserToken();
     final user = userData['user'];
-    final userId = user is Map<String, dynamic> ? user['user_id'] : null;
+    _userId = user is Map<String, dynamic> ? user['user_id'] : null;
 
-    if (token == null || userId == null) {
+    if (token == null || _userId == null) {
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -76,7 +77,7 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
 
     try {
       final response = await _apiService.get<List<dynamic>>(
-        '/cart/list/$userId',
+        '/cart/list/$_userId',
         fromJson: (raw) => raw as List,
       );
 
@@ -99,7 +100,7 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
         });
       }
       await _loadProductDetails(parsed);
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         setState(() {
           _isGuest = false;
@@ -153,6 +154,56 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
     }
   }
 
+  Future<void> _updateQuantity(_CartItemView item, int newQuantity) async {
+    if (newQuantity < 1) return;
+    setState(() {
+      item.quantity = newQuantity;
+    });
+    await _storageService.saveCartItems(_items.map((e) {
+      return {
+        'product_id': e.productId,
+        'quantity': e.quantity,
+      };
+    }).toList());
+
+    if (_userId != null) {
+      try {
+        await _apiService.put(
+          '/cart/update',
+          data: {
+            'uid': _userId.toString(),
+            'pid': item.productId.toString(),
+            'quantity': newQuantity.toString(),
+          },
+        );
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _removeItem(_CartItemView item) async {
+    setState(() {
+      _items.removeWhere((e) => e.productId == item.productId);
+    });
+    await _storageService.saveCartItems(_items.map((e) {
+      return {
+        'product_id': e.productId,
+        'quantity': e.quantity,
+      };
+    }).toList());
+
+    if (_userId != null) {
+      try {
+        await _apiService.post(
+          '/cart/delete',
+          data: {
+            'uid': _userId.toString(),
+            'pid': item.productId.toString(),
+          },
+        );
+      } catch (_) {}
+    }
+  }
+
   double get _totalPrice {
     double total = 0;
     for (final item in _items) {
@@ -182,10 +233,31 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: _loadCart,
-            child: const Text('刷新购物车'),
+            child: const Text('Refresh cart'),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _quantityControls(_CartItemView item) {
+    return Row(
+      children: [
+        IconButton(
+          onPressed: () => _updateQuantity(item, item.quantity - 1),
+          icon: const Icon(Icons.remove),
+          splashRadius: 18,
+        ),
+        Text(
+          item.quantity.toString(),
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        IconButton(
+          onPressed: () => _updateQuantity(item, item.quantity + 1),
+          icon: const Icon(Icons.add),
+          splashRadius: 18,
+        ),
+      ],
     );
   }
 
@@ -197,11 +269,11 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
     }
 
     if (_isGuest) {
-      return _emptyState('请先登录', '登录后同步云端购物车');
+      return _emptyState('Please login', 'Sign in to sync your cart');
     }
 
     if (_items.isEmpty) {
-      return _emptyState('购物车为空', '挑选喜欢的商品加入购物车吧');
+      return _emptyState('Cart is empty', 'Pick something you like');
     }
 
     return Column(
@@ -214,73 +286,86 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
             itemBuilder: (context, index) {
               final item = _items[index];
               final product = item.product;
-              return Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+              return Dismissible(
+                key: ValueKey(item.productId),
+                direction: DismissDirection.endToStart,
+                onDismissed: (_) => _removeItem(item),
+                background: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 20),
+                  color: Colors.red.shade400,
+                  child: const Icon(Icons.delete, color: Colors.white),
                 ),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: SizedBox(
-                        width: 72,
-                        height: 72,
-                        child: Image.network(
-                          Config.resolveImage(product?.imageUrl) == ''
-                              ? 'https://picsum.photos/seed/cart${item.productId}/200'
-                              : Config.resolveImage(product?.imageUrl),
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Image.asset(
-                              Config.defaultProductAsset,
-                              fit: BoxFit.cover,
-                            );
-                          },
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: SizedBox(
+                          width: 72,
+                          height: 72,
+                          child: Image.network(
+                            Config.resolveImage(product?.imageUrl) == ''
+                                ? 'https://picsum.photos/seed/cart${item.productId}/200'
+                                : Config.resolveImage(product?.imageUrl),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Image.asset(
+                                Config.defaultProductAsset,
+                                fit: BoxFit.cover,
+                              );
+                            },
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            product?.name ?? '商品加载中',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              product?.name ?? 'Loading product',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '数量：${item.quantity}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
+                            const SizedBox(height: 6),
+                            Text(
+                              'Stock: ${product?.stock ?? 0}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 6),
+                            _quantityControls(item),
+                          ],
+                        ),
                       ),
-                    ),
-                    Text(
-                      '￥${(product?.price ?? 0).toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.w600,
+                      Text(
+                        'CNY ${(product?.price ?? 0).toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             },
@@ -302,7 +387,7 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
             children: [
               Expanded(
                 child: Text(
-                  '合计：￥${_totalPrice.toStringAsFixed(2)}',
+                  'Total: CNY ${_totalPrice.toStringAsFixed(2)}',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -311,7 +396,7 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
               ),
               ElevatedButton(
                 onPressed: () {},
-                child: const Text('结算'),
+                child: const Text('Checkout'),
               ),
             ],
           ),
