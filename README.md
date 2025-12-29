@@ -1,115 +1,81 @@
 # Next-Shop 电商平台
 
-一个基于Next.js和Go的全栈电商平台项目，提供完整的电商功能包括用户认证、商品管理、购物车和订单处理等。
+Next-Shop 是一个完整的电商项目，包含 Web 前端、Flutter 客户端与 Go 后端。支持用户登录、商品浏览、购物车、分类、商品详情、以及管理员后台管理功能。
 
-## 功能特性
+## 亮点功能
 
-- **用户系统**：注册、登录、JWT认证
-- **商品管理**：商品展示、分类、搜索
-- **购物车系统**：添加商品、修改数量、结算
-- **后台管理**：商品管理、用户管理
-- **实时聊天**：集成OpenAI的客服聊天功能
-- **响应式设计**：适配各种设备屏幕
+- 用户系统：注册、登录、JWT 鉴权
+- 商品与分类：商品列表、详情、搜索、分类浏览
+- 购物车：添加、数量调整、删除、刷新同步
+- 管理后台：用户角色管理、商品管理、新建商品
+- 多端支持：Web 前端 + Flutter 客户端
 
 ## 技术栈
 
-### 前端 (client/shop)
-- **框架**: Next.js 15.3.5 (with Turbopack)
-- **UI库**: React 19
-- **样式**: TailwindCSS
-- **状态管理**: React Context
-- **构建工具**: TypeScript 5
-- **其他**:
-  - React Icons 5.5.0
-  - OpenAI SDK 5.8.3 (用于聊天功能)
+### Web 前端 (client/shop)
+- Next.js 15
+- React 19
+- TypeScript
+- TailwindCSS
+
+### Flutter 客户端 (flutter)
+- Flutter Web
+- Dio 网络请求
+- Hive 本地存储
+- 统一图片地址解析与默认图兜底
 
 ### 后端 (server)
-- **语言**: Go 1.23.2
-- **Web框架**: Gin
-- **数据库**: MySQL + GORM
-- **认证**: JWT
-- **日志**: Zap
-- **其他**:
-  - CORS中间件
-  - 数据验证器
-
-## 安装与运行
-
-### 先决条件
-- Node.js 18+ (前端)
-- Go 1.23+ (后端)
-- MySQL 8.0+
-
-### 前端开发
-```bash
-cd client/shop
-npm install
-npm run dev
-```
-
-### 后端开发
-```bash
-cd server
-go mod download
-go run main.go
-```
-
-### 生产构建
-```bash
-# 前端
-cd client/shop
-npm run build
-npm run start
-
-# 后端
-cd server
-go build
-./next-shop
-```
+- Go + Gin
+- MySQL + GORM
+- JWT 鉴权
+- Zap 日志
 
 ## 项目结构
 
 ```
 next-shop/
 ├── client/
-│   └── shop/                  # 前端项目
-│       ├── src/
-│       │   ├── app/           # Next.js应用路由
-│       │   ├── components/    # React组件
-│       │   ├── lib/           # API客户端
-│       │   └── styles/        # 全局样式
-│       └── ...                # 其他Next.js配置文件
-└── server/                    # 后端项目
-    ├── controllers/           # 业务逻辑
-    ├── middleware/            # 中间件
-    ├── model/                 # 数据模型
-    ├── router/                # 路由定义
-    └── ...                    # 其他Go模块文件
+│   └── shop/                 # Web 前端
+├── flutter/                  # Flutter 客户端
+└── server/                   # Go 后端
 ```
 
-## 开发指南
+## 快速启动
 
-1. **前端开发**:
-   - 组件放在`client/shop/src/components`
-   - 页面路由使用Next.js 13+的App Router
-   - API请求使用`client/shop/src/lib/api`中的客户端
+### Web 前端
+```bash
+cd client/shop
+npm install
+npm run dev
+```
 
-2. **后端开发**:
-   - 新API需在`server/router/router.go`注册
-   - 业务逻辑放在`server/controllers`
-   - 数据库模型在`server/model`
+### Flutter 客户端
+```bash
+cd flutter
+flutter pub get
+flutter run -d chrome
+```
 
-3. **环境变量**:
-   - 前端: 创建`.env.local`文件
-   - 后端: 配置`server/config`中的相关文件
+### 后端
+```bash
+cd server
+go mod download
+go run main.go
+```
 
-## 贡献
+## 管理后台说明
 
-欢迎提交Pull Request。请确保:
-1. 代码风格一致
-2. 包含必要的测试
-3. 更新相关文档
+- 登录后若角色为 `admin`，用户页会出现“进入后台”
+- 可管理用户角色、商品数据并新建商品
+- 管理接口路径统一为 `/api/v1/admin/*`
 
-## 许可证
+## 运行要求
 
-MIT License
+- Node.js 18+
+- Go 1.23+
+- MySQL 8.0+
+- Flutter 3.38+
+
+## License
+
+MIT
