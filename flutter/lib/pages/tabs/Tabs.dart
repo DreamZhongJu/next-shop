@@ -42,7 +42,9 @@ class _TabsState extends State<Tabs> {
       _pageController.jumpToPage(_currentIndex);
     });
     if (index == 2) {
-      _cartKey.currentState?.refresh();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _cartKey.currentState?.refresh();
+      });
     }
   }
 
@@ -60,7 +62,9 @@ class _TabsState extends State<Tabs> {
             _currentIndex = index;
           });
           if (index == 2) {
-            _cartKey.currentState?.refresh();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _cartKey.currentState?.refresh();
+            });
           }
         },
       ),
