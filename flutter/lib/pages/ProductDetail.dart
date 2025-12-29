@@ -67,19 +67,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     }
   }
 
-  int? _extractUserId(Map<String, dynamic> userData) {
-    final user = userData['user'];
-    if (user is Map<String, dynamic>) {
-      final raw = user['user_id'] ?? user['UserID'] ?? user['id'] ?? user['ID'];
-      if (raw is num) {
-        return raw.toInt();
-      }
-      if (raw is String) {
-        return int.tryParse(raw);
-      }
-    }
-    return null;
-  }
 
   Widget _buildImageGallery() {
     if (_isLoading) {
@@ -487,9 +474,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 if (product == null || product.id == null) {
                   return;
                 }
-                final userData = await _storageService.getUserData();
                 final token = await _storageService.getUserToken();
-                final userId = _extractUserId(userData);
+                final userId = await _storageService.getUserId();
                 if (token == null || userId == null) {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -557,9 +543,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 if (product == null || product.id == null) {
                   return;
                 }
-                final userData = await _storageService.getUserData();
                 final token = await _storageService.getUserToken();
-                final userId = _extractUserId(userData);
+                final userId = await _storageService.getUserId();
                 if (token == null || userId == null) {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(

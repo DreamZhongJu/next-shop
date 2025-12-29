@@ -14,17 +14,19 @@ class Tabs extends StatefulWidget {
 class _TabsState extends State<Tabs> {
   int _currentIndex = 0;
   late final PageController _pageController;
-  final List<Widget> _pageList = const [
-    HomePage(),
-    CategoryPage(),
-    CartPage(),
-    UserPage(),
-  ];
+  final GlobalKey<CartPageState> _cartKey = GlobalKey<CartPageState>();
+  late final List<Widget> _pageList;
   final List<String> _titles = const ['首页', '分类', '购物车', '我的'];
 
   @override
   void initState() {
     _pageController = PageController(initialPage: _currentIndex);
+    _pageList = [
+      const HomePage(),
+      const CategoryPage(),
+      CartPage(key: _cartKey),
+      const UserPage(),
+    ];
     super.initState();
   }
 
@@ -32,6 +34,16 @@ class _TabsState extends State<Tabs> {
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  void _handleTabChange(int index) {
+    setState(() {
+      _currentIndex = index;
+      _pageController.jumpToPage(_currentIndex);
+    });
+    if (index == 2) {
+      _cartKey.currentState?.refresh();
+    }
   }
 
   @override
@@ -47,17 +59,15 @@ class _TabsState extends State<Tabs> {
           setState(() {
             _currentIndex = index;
           });
+          if (index == 2) {
+            _cartKey.currentState?.refresh();
+          }
         },
       ),
       bottomNavigationBar: BottomNavigationBar(
         fixedColor: Colors.red,
         currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-            _pageController.jumpToPage(_currentIndex);
-          });
-        },
+        onTap: _handleTabChange,
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(

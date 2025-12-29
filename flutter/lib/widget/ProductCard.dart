@@ -47,25 +47,22 @@ class ProductCard extends StatelessWidget {
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
                   ),
-                  child: CachedNetworkImage(
-                    imageUrl: imageUrl,
-                    width: double.infinity,
-                    height: 120,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Shimmer.fromColors(
-                      baseColor: Colors.grey.shade300,
-                      highlightColor: Colors.grey.shade100,
-                      child: Container(
-                        width: double.infinity,
-                        height: 120,
-                        color: Colors.white,
-                      ),
-                    ),
-                    errorWidget: (context, url, error) => Image.asset(
-                      Config.defaultProductAsset,
-                      width: double.infinity,
-                      height: 120,
+                  child: AspectRatio(
+                    aspectRatio: 1.2,
+                    child: CachedNetworkImage(
+                      imageUrl: imageUrl,
                       fit: BoxFit.cover,
+                      placeholder: (context, url) => Shimmer.fromColors(
+                        baseColor: Colors.grey.shade300,
+                        highlightColor: Colors.grey.shade100,
+                        child: Container(
+                          color: Colors.white,
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Image.asset(
+                        Config.defaultProductAsset,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                 ),
@@ -115,7 +112,7 @@ class ProductCard extends StatelessWidget {
               ],
             ),
             Padding(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -129,7 +126,7 @@ class ProductCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   Row(
                     children: [
                       Flexible(
@@ -160,7 +157,7 @@ class ProductCard extends StatelessWidget {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   Row(
                     children: [
                       Expanded(
@@ -241,14 +238,15 @@ class ProductCardSkeleton extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: double.infinity,
-              height: 120,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
+            AspectRatio(
+              aspectRatio: 1.2,
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
                 ),
               ),
             ),
