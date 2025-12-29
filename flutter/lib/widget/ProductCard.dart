@@ -29,6 +29,8 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent = theme.colorScheme.primary;
     return GestureDetector(
       onTap: onTap,
       child: Card(
@@ -112,7 +114,7 @@ class ProductCard extends StatelessWidget {
               ],
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -137,7 +139,7 @@ class ProductCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: Colors.blue.shade700,
+                            color: accent,
                           ),
                         ),
                       ),
@@ -198,7 +200,7 @@ class ProductCard extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
+                          color: accent.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Text(
@@ -206,7 +208,7 @@ class ProductCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: Colors.blue,
+                            color: Colors.black87,
                           ),
                         ),
                       ),

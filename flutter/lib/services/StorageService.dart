@@ -141,6 +141,34 @@ class StorageService {
     return box.get('user_token');
   }
 
+  Future<String?> getUserRole() async {
+    final userData = await getUserData();
+    final user = userData['user'];
+    dynamic rawRole;
+    if (user is Map<String, dynamic>) {
+      rawRole = user['role'] ?? user['Role'];
+    }
+    rawRole ??= userData['role'] ?? userData['Role'];
+    if (rawRole is String && rawRole.isNotEmpty) {
+      return rawRole;
+    }
+    final token = await getUserToken();
+    if (token == null) return null;
+    final parts = token.toString().split('.');
+    if (parts.length != 3) return null;
+    final payload = parts[1];
+    final normalized = base64Url.normalize(payload);
+    try {
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final data = json.decode(decoded);
+      final role = data['role'];
+      if (role is String) {
+        return role;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   Future<void> clearUserData() async {
     await init();
     final box = Hive.box(_userBox);

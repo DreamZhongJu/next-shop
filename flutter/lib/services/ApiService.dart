@@ -222,4 +222,52 @@ class ApiService {
       rethrow;
     }
   }
+
+  Future<Response<dynamic>> getRaw(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    return _dio.get(
+      path,
+      queryParameters: queryParameters,
+      options: options,
+    );
+  }
+
+  Future<Response<dynamic>> postRaw(
+    String path, {
+    dynamic data,
+    Options? options,
+  }) async {
+    return _dio.post(
+      path,
+      data: data,
+      options: options,
+    );
+  }
+
+  Future<Response<dynamic>> putRaw(
+    String path, {
+    dynamic data,
+    Options? options,
+  }) async {
+    return _dio.put(
+      path,
+      data: data,
+      options: options,
+    );
+  }
+
+  Future<Response<dynamic>> deleteRaw(
+    String path, {
+    dynamic data,
+    Options? options,
+  }) async {
+    return _dio.delete(
+      path,
+      data: data,
+      options: options,
+    );
+  }
 }

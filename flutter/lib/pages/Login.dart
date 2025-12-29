@@ -56,7 +56,8 @@ class _LoginPageState extends State<LoginPage> {
         }
         final user = data['user'];
         if (user is Map<String, dynamic>) {
-          data['user_id'] = user['user_id'] ?? user['UserID'] ?? user['id'] ?? user['ID'];
+          data['user_id'] =
+              user['user_id'] ?? user['UserID'] ?? user['id'] ?? user['ID'];
           data['username'] = user['username'] ?? user['Username'];
         }
         await _storageService.saveUserData(data);
@@ -94,6 +95,35 @@ class _LoginPageState extends State<LoginPage> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  child: const Icon(Icons.store, color: Colors.white),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Next Shop',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 20),
           TextField(
             controller: _usernameController,

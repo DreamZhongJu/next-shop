@@ -339,12 +339,25 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 6,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
           Text(
             subtitle,
@@ -532,13 +545,13 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
           children: [
             const SizedBox(height: 16),
             _buildSwiper(),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             _buildSectionTitle('特色商品', '查看全部'),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             _buildFeaturedProducts(),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             _buildSectionTitle('热门推荐', '更多推荐'),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             _buildRecommendedProducts(),
             const SizedBox(height: 24),
           ],
