@@ -15,6 +15,7 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
 
   Map<String, dynamic> _userData = {};
   int _userCount = 0;
+  int _cartCount = 0;
   bool _loading = false;
 
   @override
@@ -29,6 +30,9 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
     });
 
     final data = await _storageService.getUserData();
+    final cartItems = await _storageService.getCartItems();
+    _cartCount = cartItems.length;
+
     try {
       final response = await _apiService.get<Map<String, dynamic>>(
         '/user/count',
@@ -37,7 +41,7 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
       if (response.code == 0) {
         _userCount = (response.data['count'] as num?)?.toInt() ?? 0;
       }
-    } catch (e) {}
+    } catch (_) {}
 
     if (mounted) {
       setState(() {
@@ -47,15 +51,56 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
     }
   }
 
-  Widget _profileHeader() {
+  bool get _isLoggedIn =>
+      _userData.isNotEmpty && _userData['token'] != null;
+
+  String get _displayName {
     final user = _userData['user'];
-    final username = user is Map<String, dynamic>
-        ? (user['username'] ?? '游客')
-        : '游客';
-    final displayName = username.toString();
-    final initial = displayName.isNotEmpty
-        ? displayName.substring(0, 1).toUpperCase()
-        : 'U';
+    final username =
+        user is Map<String, dynamic> ? (user['username'] ?? 'Guest') : 'Guest';
+    return username.toString();
+  }
+
+  String get _initial {
+    final name = _displayName;
+    return name.isNotEmpty ? name.substring(0, 1).toUpperCase() : 'U';
+  }
+
+  Future<void> _logout() async {
+    await _storageService.clearUserData();
+    await _storageService.clearAllCache();
+    if (mounted) {
+      setState(() {
+        _userData = {};
+        _cartCount = 0;
+      });
+    }
+  }
+
+  Widget _statItem(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.9),
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _profileHeader() {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -63,40 +108,63 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
           colors: [Colors.blue.shade400, Colors.teal.shade300],
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: Colors.white,
-            child: Text(
-              initial,
-              style: TextStyle(
-                color: Colors.blue.shade600,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
-              Text(
-                displayName,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: Colors.white,
+                child: Text(
+                  _initial,
+                  style: TextStyle(
+                    color: Colors.blue.shade600,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                '平台用户数：$_userCount',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
-                  fontSize: 12,
-                ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _displayName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _isLoggedIn ? 'Member' : 'Guest mode',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
+              const Spacer(),
+              TextButton(
+                onPressed: _isLoggedIn ? _logout : null,
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                ),
+                child: Text(_isLoggedIn ? 'Logout' : 'Login'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _statItem('Users', _userCount.toString()),
+              _statItem('Cart', _cartCount.toString()),
+              _statItem('Orders', '0'),
             ],
           ),
         ],
@@ -104,33 +172,36 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
     );
   }
 
-  Widget _menuItem(IconData icon, String title) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.blueGrey.shade600),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(fontSize: 14),
+  Widget _menuItem(IconData icon, String title, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
-          ),
-          Icon(Icons.chevron_right, color: Colors.grey.shade400),
-        ],
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.blueGrey.shade600),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(fontSize: 14),
+              ),
+            ),
+            Icon(Icons.chevron_right, color: Colors.grey.shade400),
+          ],
+        ),
       ),
     );
   }
@@ -138,20 +209,24 @@ class _UserPageState extends State<UserPage> with AutomaticKeepAliveClientMixin 
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return _loading
-        ? const Center(child: CircularProgressIndicator())
-        : ListView(
-            children: [
-              _profileHeader(),
-              const SizedBox(height: 16),
-              _menuItem(Icons.receipt_long, '我的订单'),
-              _menuItem(Icons.location_on_outlined, '收货地址'),
-              _menuItem(Icons.favorite_border, '收藏夹'),
-              _menuItem(Icons.support_agent, '客服与帮助'),
-              _menuItem(Icons.settings_outlined, '设置'),
-              const SizedBox(height: 24),
-            ],
-          );
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return RefreshIndicator(
+      onRefresh: _loadProfile,
+      child: ListView(
+        children: [
+          _profileHeader(),
+          const SizedBox(height: 16),
+          _menuItem(Icons.receipt_long, 'My orders'),
+          _menuItem(Icons.location_on_outlined, 'Shipping addresses'),
+          _menuItem(Icons.favorite_border, 'Favorites'),
+          _menuItem(Icons.support_agent, 'Support'),
+          _menuItem(Icons.settings_outlined, 'Settings'),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
   }
 
   @override

@@ -78,14 +78,13 @@ class _CategoryPageState extends State<CategoryPage>
       if (mounted) {
         setState(() {
           _leftCateList = response.data;
-          _loadingLeft = false;
         });
       }
 
       if (_leftCateList.isNotEmpty) {
         await _loadRightCateData(_leftCateList.first.id);
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         setState(() {
           _loadError = _leftCateList.isEmpty;
@@ -130,8 +129,7 @@ class _CategoryPageState extends State<CategoryPage>
           _rightCateList = response.data;
         });
       }
-    } catch (e) {
-    } finally {
+    } catch (_) {} finally {
       if (mounted) {
         setState(() {
           _loadingRight = false;
@@ -156,7 +154,7 @@ class _CategoryPageState extends State<CategoryPage>
         child: Center(
           child: TextButton(
             onPressed: _loadLeftCateData,
-            child: const Text('点击重试'),
+            child: const Text('Retry'),
           ),
         ),
       );
@@ -176,9 +174,9 @@ class _CategoryPageState extends State<CategoryPage>
               _loadRightCateData(_leftCateList[index].id);
             },
             child: Container(
-              padding: EdgeInsets.symmetric(vertical: 18.h, horizontal: 10.w),
+              padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 10.w),
               decoration: BoxDecoration(
-                color: selected ? const Color(0xFFF2F7F5) : Colors.white,
+                color: selected ? const Color(0xFFEEF6F3) : Colors.white,
                 border: Border(
                   left: BorderSide(
                     color: selected ? Colors.red : Colors.transparent,
@@ -217,14 +215,17 @@ class _CategoryPageState extends State<CategoryPage>
     if (_rightCateList.isEmpty) {
       return const Expanded(
         child: Center(
-          child: Text('暂无分类'),
+          child: Text('No categories'),
         ),
       );
     }
 
     return Expanded(
       child: Container(
-        color: const Color(0xFFF7F9F8),
+        padding: EdgeInsets.only(top: 4.h),
+        decoration: const BoxDecoration(
+          color: Color(0xFFF7F9F8),
+        ),
         child: GridView.builder(
           padding: EdgeInsets.all(12.w),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -246,11 +247,11 @@ class _CategoryPageState extends State<CategoryPage>
                 padding: EdgeInsets.all(10.w),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 8,
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
                   ],
@@ -260,7 +261,7 @@ class _CategoryPageState extends State<CategoryPage>
                     AspectRatio(
                       aspectRatio: 1 / 1,
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                         child: CachedNetworkImage(
                           imageUrl:
                               'https://picsum.photos/seed/cate${item.id}/200/200',
@@ -273,13 +274,20 @@ class _CategoryPageState extends State<CategoryPage>
                       ),
                     ),
                     SizedBox(height: 8.h),
-                    SizedBox(
-                      height: 18.h,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.blueGrey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: Text(
                         item.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12),
+                        style: const TextStyle(fontSize: 11),
                       ),
                     ),
                   ],
@@ -292,19 +300,62 @@ class _CategoryPageState extends State<CategoryPage>
     );
   }
 
+  Widget _searchHeader() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.search, color: Colors.grey.shade500),
+            const SizedBox(width: 8),
+            Text(
+              'Search categories',
+              style: TextStyle(
+                color: Colors.grey.shade500,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
     final leftWidth = ScreenAdapter.width(context) / 4;
     final rightItemWidth = (ScreenAdapter.width(context) - leftWidth - 24) / 3;
-    final rightItemHeight = rightItemWidth + 40.h;
+    final rightItemHeight = rightItemWidth + 46.h;
 
     return ScreenAdapter.init(
-      child: Row(
-        children: [
-          _leftCateWidget(leftWidth),
-          _rightCateWidget(rightItemWidth, rightItemHeight),
-        ],
+      child: Container(
+        color: const Color(0xFFF7F9F8),
+        child: Column(
+          children: [
+            _searchHeader(),
+            Expanded(
+              child: Row(
+                children: [
+                  _leftCateWidget(leftWidth),
+                  _rightCateWidget(rightItemWidth, rightItemHeight),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
