@@ -114,12 +114,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
             ),
             errorWidget: (context, url, error) => Container(
               color: Colors.grey.shade200,
-              child: const Center(
-                child: Icon(
-                  Icons.image_not_supported_outlined,
-                  color: Colors.grey,
-                  size: 48,
-                ),
+              child: Image.asset(
+                Config.defaultProductAsset,
+                fit: BoxFit.cover,
               ),
             ),
           ),
@@ -160,10 +157,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       ),
                       errorWidget: (context, url, error) => Container(
                         color: Colors.grey.shade200,
-                        child: const Icon(
-                          Icons.image_not_supported_outlined,
-                          color: Colors.grey,
-                          size: 24,
+                        child: Image.asset(
+                          Config.defaultProductAsset,
+                          fit: BoxFit.cover,
                         ),
                       ),
                     ),

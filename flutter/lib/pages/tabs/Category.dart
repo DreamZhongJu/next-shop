@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_jdshop/model/CateModle.dart';
+import 'package:flutter_jdshop/config/Config.dart';
 import 'package:flutter_jdshop/services/ApiService.dart';
 import 'package:flutter_jdshop/services/ScreenAdaper.dart';
 import 'package:flutter_jdshop/services/StorageService.dart';
@@ -264,6 +265,10 @@ class _CategoryPageState extends State<CategoryPage>
                           imageUrl:
                               'https://picsum.photos/seed/cate${item.id}/200/200',
                           fit: BoxFit.cover,
+                          errorWidget: (context, url, error) => Image.asset(
+                            Config.defaultProductAsset,
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
                     ),

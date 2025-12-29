@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:flutter_jdshop/config/Config.dart';
 
 class ProductCard extends StatelessWidget {
   final String imageUrl;
@@ -60,15 +61,11 @@ class ProductCard extends StatelessWidget {
                         color: Colors.white,
                       ),
                     ),
-                    errorWidget: (context, url, error) => Container(
+                    errorWidget: (context, url, error) => Image.asset(
+                      Config.defaultProductAsset,
                       width: double.infinity,
                       height: 120,
-                      color: Colors.grey.shade200,
-                      child: const Icon(
-                        Icons.image_not_supported_outlined,
-                        color: Colors.grey,
-                        size: 40,
-                      ),
+                      fit: BoxFit.cover,
                     ),
                   ),
                 ),

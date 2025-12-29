@@ -239,6 +239,12 @@ class _CartPageState extends State<CartPage> with AutomaticKeepAliveClientMixin 
                               ? 'https://picsum.photos/seed/cart${item.productId}/200'
                               : Config.resolveImage(product?.imageUrl),
                           fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Image.asset(
+                              Config.defaultProductAsset,
+                              fit: BoxFit.cover,
+                            );
+                          },
                         ),
                       ),
                     ),
