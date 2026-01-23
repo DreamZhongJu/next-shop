@@ -7,3 +7,5 @@ AI/item_desc_model_epoch_4.pth
 AI/item_desc_model_epoch_5.pth
 AI/item_desc_model_final.pth
 AI/__pycache__/*
+flutter/docs/*
+server/logs/*
